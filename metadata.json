@@ -1,0 +1,6 @@
+{
+  "name": "حكايات الليل",
+  "description": "AI Story Production Studio",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
