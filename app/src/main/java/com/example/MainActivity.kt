@@ -14,7 +14,6 @@ import com.example.ui.chat.ChatViewModel
 import com.example.ui.chat.HakayatChatScreen
 import com.example.ui.create.CreateStoryScreen
 import com.example.ui.home.HomeScreen
-import com.example.ui.player.StoryPlayerScreen
 import com.example.ui.theme.HakayatTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -32,8 +31,8 @@ class MainActivity : ComponentActivity() {
             HomeScreen(
               onCreateClick = { navController.navigate("create") },
               onProjectClick = { project ->
-                // A project is opened in the editor until a real generated video URL
-                // is persisted by the generation pipeline. Never play demo media here.
+                // Projects remain in the editor until the real generation pipeline
+                // persists a playable video URL. Demo media must never be shown.
                 navController.navigate("editor/${project.id}")
               },
               onLibraryClick = { navController.navigate("library") }
@@ -91,18 +90,15 @@ class MainActivity : ComponentActivity() {
 
           composable(
             route = "editor/{projectId}",
-            arguments = listOf(androidx.navigation.navArgument("projectId") { type = androidx.navigation.NavType.StringType })
+            arguments = listOf(
+              androidx.navigation.navArgument("projectId") {
+                type = androidx.navigation.NavType.StringType
+              }
+            )
           ) { backStackEntry ->
-            val projectId = backStackEntry.arguments?.getString("projectId") ?: ""
+            val projectId = backStackEntry.arguments?.getString("projectId") ?: return@composable
             com.example.ui.editor.SceneEditorScreen(
               projectId = projectId,
-              onBack = { navController.popBackStack() }
-            )
-          }
-
-          composable("player") {
-            StoryPlayerScreen(
-              videoUri = "",
               onBack = { navController.popBackStack() }
             )
           }
