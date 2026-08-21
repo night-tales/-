@@ -3,9 +3,9 @@ package com.example.di
 import android.content.Context
 import com.example.generation.AudioProvider
 import com.example.generation.GeminiImageProvider
+import com.example.generation.GeminiTtsAudioProvider
 import com.example.generation.ImageProvider
 import com.example.generation.Media3VideoAssembler
-import com.example.generation.UnconfiguredAudioProvider
 import com.example.generation.VideoAssembler
 import dagger.Module
 import dagger.Provides
@@ -24,7 +24,8 @@ object MediaModule {
 
     @Provides
     @Singleton
-    fun provideAudioProvider(): AudioProvider = UnconfiguredAudioProvider()
+    fun provideAudioProvider(@ApplicationContext context: Context): AudioProvider =
+        GeminiTtsAudioProvider(context)
 
     @Provides
     @Singleton
