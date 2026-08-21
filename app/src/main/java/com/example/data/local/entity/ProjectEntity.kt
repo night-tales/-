@@ -10,6 +10,7 @@ data class ProjectEntity(
     val genre: String,
     val durationMinutes: Int,
     val status: String,
+    val videoUri: String? = null,
     val createdAt: Long,
     val updatedAt: Long
 )
