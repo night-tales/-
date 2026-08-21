@@ -13,10 +13,33 @@ class GenerationRepository @Inject constructor(private val generationJobDao: Gen
 
     suspend fun createJob(projectId: String): GenerationJobEntity {
         val now = System.currentTimeMillis()
-        return GenerationJobEntity(UUID.randomUUID().toString(), projectId, GenerationStatus.QUEUED, createdAt = now, updatedAt = now).also { generationJobDao.upsert(it) }
+        return GenerationJobEntity(
+            id = UUID.randomUUID().toString(),
+            projectId = projectId,
+            status = GenerationStatus.QUEUED,
+            createdAt = now,
+            updatedAt = now
+        ).also { generationJobDao.upsert(it) }
     }
 
-    suspend fun updateState(jobId: String, status: String, progress: Int, step: String? = null, errorMessage: String? = null) {
-        generationJobDao.updateState(jobId, status, progress.coerceIn(0, 100), step, errorMessage, System.currentTimeMillis())
+    suspend fun incrementAttempt(jobId: String) {
+        generationJobDao.incrementAttempt(jobId, System.currentTimeMillis())
+    }
+
+    suspend fun updateState(
+        jobId: String,
+        status: String,
+        progress: Int,
+        step: String? = null,
+        errorMessage: String? = null
+    ) {
+        generationJobDao.updateState(
+            jobId,
+            status,
+            progress.coerceIn(0, 100),
+            step,
+            errorMessage,
+            System.currentTimeMillis()
+        )
     }
 }
