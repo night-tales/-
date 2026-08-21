@@ -1,5 +1,6 @@
 package com.example.di
 
+import com.example.BuildConfig
 import com.example.data.remote.gemini.GeminiApiService
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -20,32 +21,37 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideMoshi(): Moshi {
-        return Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .build()
-    }
+    fun provideMoshi(): Moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
 
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+        val logging = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BASIC
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
+        }
+
         return OkHttpClient.Builder()
             .addInterceptor(logging)
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(90, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .build()
     }
 
     @Provides
     @Singleton
-    fun provideGeminiApi(client: OkHttpClient, moshi: Moshi): GeminiApiService {
-        return Retrofit.Builder()
+    fun provideGeminiApi(client: OkHttpClient, moshi: Moshi): GeminiApiService =
+        Retrofit.Builder()
             .baseUrl("https://generativelanguage.googleapis.com/")
             .client(client)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(GeminiApiService::class.java)
-    }
 }
