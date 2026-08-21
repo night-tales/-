@@ -3,6 +3,7 @@ package com.example.domain.ai
 import com.example.BuildConfig
 import com.example.data.remote.gemini.Content
 import com.example.data.remote.gemini.GenerateContentRequest
+import com.example.data.remote.gemini.GenerateContentResponse
 import com.example.data.remote.gemini.GenerationConfig
 import com.example.data.remote.gemini.GeminiApiService
 import com.example.data.remote.gemini.Part
@@ -14,73 +15,61 @@ import javax.inject.Inject
 class AiDirector @Inject constructor(
     private val geminiApi: GeminiApiService
 ) {
-    suspend fun understandIntent(userMessage: String): AiAction = withContext(Dispatchers.IO) {
+    private suspend fun generate(request: GenerateContentRequest): String = withContext(Dispatchers.IO) {
+        val response = geminiApi.generateContent(BuildConfig.GEMINI_API_KEY, request)
+        if (!response.isSuccessful) {
+            val detail = response.errorBody()?.string()?.take(500).orEmpty()
+            throw IllegalStateException("Gemini request failed (${response.code()}): $detail")
+        }
+        response.body()?.extractText()
+            ?: throw IllegalStateException("Gemini returned an empty response")
+    }
+
+    private fun GenerateContentResponse.extractText(): String =
+        candidates?.asSequence()
+            ?.mapNotNull { candidate ->
+                candidate.content?.parts?.asSequence()?.mapNotNull { it.text.trim() }?.firstOrNull()
+            }
+            ?.firstOrNull { it.isNotBlank() }
+            ?: ""
+
+    suspend fun understandIntent(userMessage: String): AiAction = runCatching {
         val prompt = """
             You are the AI Director for Night Tales Studio.
-            Analyze the user's message and determine their intent.
-            Return ONLY a raw string representing the intent from this exact list:
-            CREATE_STORY
-            MODIFY_STORY
-            CREATE_IMAGE
-            CREATE_AUDIO
-            CREATE_VIDEO
-            UNKNOWN
-            
-            User message: "$userMessage"
-        """.trimIndent()
-        
-        try {
-            val request = GenerateContentRequest(
-                contents = listOf(
-                    Content(parts = listOf(Part(text = prompt)))
-                )
-            )
-            val response = geminiApi.generateContent(BuildConfig.GEMINI_API_KEY, request)
-            val textResponse = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim() ?: "UNKNOWN"
-            
-            when {
-                textResponse.contains("CREATE_STORY") -> AiAction.CreateStory(userMessage)
-                textResponse.contains("MODIFY_STORY") -> AiAction.ModifyStory(userMessage)
-                textResponse.contains("CREATE_IMAGE") -> AiAction.CreateImage(userMessage)
-                textResponse.contains("CREATE_AUDIO") -> AiAction.CreateAudio(userMessage)
-                textResponse.contains("CREATE_VIDEO") -> AiAction.CreateVideo("temp_id")
-                else -> AiAction.Unknown
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            AiAction.Unknown
-        }
-    }
+            Analyze the user's message and return ONLY one exact intent token:
+            CREATE_STORY, MODIFY_STORY, CREATE_IMAGE, CREATE_AUDIO, CREATE_VIDEO, UNKNOWN.
 
-    suspend fun generateChatReply(userMessage: String): String = withContext(Dispatchers.IO) {
-        val prompt = """
-            أنت المخرج الذكي في استوديو 'حكايات الليل' (Night Tales Studio).
-            مهمتك هي مساعدة المستخدم في تحويل أفكاره إلى أفلام قصصية.
-            الرد يجب أن يكون قصيراً، مشجعاً، وباللغة العربية الفصحى المبسطة.
-            رد على رسالة المستخدم التالية: "$userMessage"
+            User message: $userMessage
         """.trimIndent()
-        
-        try {
-            val request = GenerateContentRequest(
-                contents = listOf(
-                    Content(parts = listOf(Part(text = prompt)))
-                )
-            )
-            val response = geminiApi.generateContent(BuildConfig.GEMINI_API_KEY, request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim() 
-                ?: "عذراً، حدث خطأ في التواصل مع الاستوديو. حاول مرة أخرى."
-        } catch (e: Exception) {
-            e.printStackTrace()
-            "عذراً، حدث خطأ في التواصل مع الاستوديو. حاول مرة أخرى."
-        }
-    }
+        val text = generate(GenerateContentRequest(
+            contents = listOf(Content(parts = listOf(Part(text = prompt)))),
+            generationConfig = GenerationConfig(temperature = 0f)
+        )).uppercase()
 
-    suspend fun generateImageForScene(prompt: String): String = withContext(Dispatchers.IO) {
-        // Since Gemini API does not natively support image generation, 
-        // we use a free AI image generation endpoint (Pollinations AI)
-        // using the scene description/prompt for the image text.
-        val encodedPrompt = java.net.URLEncoder.encode(prompt, "UTF-8")
-        "https://image.pollinations.ai/prompt/$encodedPrompt?width=800&height=400&nologo=true"
+        when {
+            text.contains("CREATE_STORY") -> AiAction.CreateStory(userMessage)
+            text.contains("MODIFY_STORY") -> AiAction.ModifyStory(userMessage)
+            text.contains("CREATE_IMAGE") -> AiAction.CreateImage(userMessage)
+            text.contains("CREATE_AUDIO") -> AiAction.CreateAudio(userMessage)
+            text.contains("CREATE_VIDEO") -> AiAction.CreateVideo("pending")
+            else -> AiAction.Unknown
+        }
+    }.getOrElse { AiAction.Unknown }
+
+    suspend fun generateChatReply(userMessage: String): String = runCatching {
+        generate(GenerateContentRequest(
+            contents = listOf(Content(parts = listOf(Part(text = """
+                أنت المخرج الذكي في استوديو «حكايات الليل» (Night Tales Studio).
+                ساعد المستخدم في تحويل فكرته إلى فيلم قصصي.
+                أجب بالعربية الفصحى المبسطة، باختصار وتشجيع.
+                رسالة المستخدم: $userMessage
+            """.trimIndent()))))
+        ))
+    }.getOrElse { "عذراً، تعذر الاتصال بخدمة الذكاء الاصطناعي. حاول مرة أخرى." }
+
+    suspend fun generateImageForScene(prompt: String): String {
+        val encodedPrompt = java.net.URLEncoder.encode(prompt, Charsets.UTF_8.name())
+        return "https://image.pollinations.ai/prompt/$encodedPrompt?width=800&height=450&nologo=true"
     }
 
     data class ProjectBlueprintResult(
@@ -93,46 +82,38 @@ class AiDirector @Inject constructor(
         val scenesCount: Int
     )
 
-    suspend fun generateProjectBlueprint(promptText: String): ProjectBlueprintResult? = withContext(Dispatchers.IO) {
+    suspend fun generateProjectBlueprint(promptText: String): ProjectBlueprintResult? = runCatching {
         val prompt = """
             You are the AI Director for Night Tales Studio.
-            The user wants to create a story based on the following idea: "$promptText"
-            
-            Create a high-level project blueprint.
-            Return a valid JSON object matching exactly this structure, with no markdown formatting or extra text:
+            Create a high-level story blueprint for this idea:
+            $promptText
+
+            Return ONLY valid JSON with exactly these fields:
             {
-              "title": "A catchy title in Arabic",
-              "genre": "Story genre (e.g., مغامرة • خيال)",
+              "title": "Arabic title",
+              "genre": "Arabic genre",
               "duration": 5,
-              "heroName": "Main character name",
-              "heroRole": "Role (e.g., البطل)",
-              "heroDescription": "Visual description of the hero in Arabic",
+              "heroName": "main character name",
+              "heroRole": "main character role",
+              "heroDescription": "visual description in Arabic",
               "scenesCount": 8
             }
         """.trimIndent()
-        try {
-            val request = GenerateContentRequest(
-                contents = listOf(Content(parts = listOf(Part(text = prompt)))),
-                generationConfig = GenerationConfig(responseMimeType = "application/json")
-            )
-            val response = geminiApi.generateContent(BuildConfig.GEMINI_API_KEY, request)
-            val jsonText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
-            
-            if (jsonText != null) {
-                val json = JSONObject(jsonText)
-                ProjectBlueprintResult(
-                    title = json.optString("title", "قصة جديدة"),
-                    genre = json.optString("genre", "خيال"),
-                    duration = json.optInt("duration", 5),
-                    heroName = json.optString("heroName", "البطل"),
-                    heroRole = json.optString("heroRole", "شخصية رئيسية"),
-                    heroDescription = json.optString("heroDescription", "وصف البطل"),
-                    scenesCount = json.optInt("scenesCount", 6)
-                )
-            } else null
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
+
+        val raw = generate(GenerateContentRequest(
+            contents = listOf(Content(parts = listOf(Part(text = prompt)))),
+            generationConfig = GenerationConfig(responseMimeType = "application/json", temperature = 0.2f)
+        )).trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+
+        val json = JSONObject(raw)
+        ProjectBlueprintResult(
+            title = json.optString("title", "قصة جديدة").trim().ifBlank { "قصة جديدة" },
+            genre = json.optString("genre", "خيال").trim().ifBlank { "خيال" },
+            duration = json.optInt("duration", 5).coerceIn(1, 180),
+            heroName = json.optString("heroName", "البطل").trim().ifBlank { "البطل" },
+            heroRole = json.optString("heroRole", "شخصية رئيسية").trim().ifBlank { "شخصية رئيسية" },
+            heroDescription = json.optString("heroDescription", "وصف البطل").trim(),
+            scenesCount = json.optInt("scenesCount", 6).coerceIn(1, 100)
+        )
+    }.getOrNull()
 }
