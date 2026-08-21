@@ -24,6 +24,9 @@ interface GenerationJobDao {
     @Query("UPDATE generation_jobs SET status = :status, progress = :progress, currentStep = :step, errorMessage = :errorMessage, updatedAt = :updatedAt WHERE id = :id")
     suspend fun updateState(id: String, status: String, progress: Int, step: String?, errorMessage: String?, updatedAt: Long)
 
+    @Query("UPDATE generation_jobs SET attempt = attempt + 1, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun incrementAttempt(id: String, updatedAt: Long)
+
     @Query("DELETE FROM generation_jobs WHERE projectId = :projectId")
     suspend fun deleteForProject(projectId: String)
 }
