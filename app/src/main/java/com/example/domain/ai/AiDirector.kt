@@ -41,10 +41,12 @@ class AiDirector @Inject constructor(
 
             User message: $userMessage
         """.trimIndent()
-        val text = generate(GenerateContentRequest(
-            contents = listOf(Content(parts = listOf(Part(text = prompt)))),
-            generationConfig = GenerationConfig(temperature = 0f)
-        )).uppercase()
+        val text = generate(
+            GenerateContentRequest(
+                contents = listOf(Content(parts = listOf(Part(text = prompt)))),
+                generationConfig = GenerationConfig(temperature = 0f)
+            )
+        ).uppercase()
 
         when {
             text.contains("CREATE_STORY") -> AiAction.CreateStory(userMessage)
@@ -57,19 +59,28 @@ class AiDirector @Inject constructor(
     }.getOrElse { AiAction.Unknown }
 
     suspend fun generateChatReply(userMessage: String): String = runCatching {
-        generate(GenerateContentRequest(
-            contents = listOf(Content(parts = listOf(Part(text = """
-                أنت المخرج الذكي في استوديو «حكايات الليل» (Night Tales Studio).
-                ساعد المستخدم في تحويل فكرته إلى فيلم قصصي.
-                أجب بالعربية الفصحى المبسطة، باختصار وتشجيع.
-                رسالة المستخدم: $userMessage
-            """.trimIndent()))))
-        ))
+        generate(
+            GenerateContentRequest(
+                contents = listOf(
+                    Content(
+                        parts = listOf(
+                            Part(
+                                text = """
+                                    أنت المخرج الذكي في استوديو «حكايات الليل» (Night Tales Studio).
+                                    ساعد المستخدم في تحويل فكرته إلى فيلم قصصي.
+                                    أجب بالعربية الفصحى المبسطة، باختصار وتشجيع.
+                                    رسالة المستخدم: $userMessage
+                                """.trimIndent()
+                            )
+                        )
+                    )
+                )
+            )
+        )
     }.getOrElse { "عذراً، تعذر الاتصال بخدمة الذكاء الاصطناعي. حاول مرة أخرى." }
 
     suspend fun generateImageForScene(prompt: String): String {
-        val encodedPrompt = java.net.URLEncoder.encode(prompt, Charsets.UTF_8.name())
-        return "https://image.pollinations.ai/prompt/$encodedPrompt?width=800&height=450&nologo=true"
+        throw IllegalStateException("Image generation provider is not configured")
     }
 
     data class ProjectBlueprintResult(
@@ -100,10 +111,15 @@ class AiDirector @Inject constructor(
             }
         """.trimIndent()
 
-        val raw = generate(GenerateContentRequest(
-            contents = listOf(Content(parts = listOf(Part(text = prompt)))),
-            generationConfig = GenerationConfig(responseMimeType = "application/json", temperature = 0.2f)
-        )).trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+        val raw = generate(
+            GenerateContentRequest(
+                contents = listOf(Content(parts = listOf(Part(text = prompt)))),
+                generationConfig = GenerationConfig(
+                    responseMimeType = "application/json",
+                    temperature = 0.2f
+                )
+            )
+        ).trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
 
         val json = JSONObject(raw)
         ProjectBlueprintResult(
