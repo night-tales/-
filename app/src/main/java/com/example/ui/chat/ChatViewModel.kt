@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.entity.ProjectEntity
 import com.example.data.local.entity.SceneEntity
+import com.example.data.repository.GenerationRepository
 import com.example.data.repository.ProjectRepository
 import com.example.domain.ai.AiAction
 import com.example.domain.ai.AiDirector
+import com.example.generation.GenerationScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +21,9 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val aiDirector: AiDirector,
-    private val projectRepository: ProjectRepository
+    private val projectRepository: ProjectRepository,
+    private val generationRepository: GenerationRepository,
+    private val generationScheduler: GenerationScheduler
 ) : ViewModel() {
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -42,46 +46,29 @@ class ChatViewModel @Inject constructor(
 
     fun sendMessage(text: String) {
         if (text.isBlank()) return
-
         addMessage(ChatMessage(UUID.randomUUID().toString(), ChatRole.USER, text))
 
         viewModelScope.launch {
-            addMessage(
-                ChatMessage(
-                    id = UUID.randomUUID().toString(),
-                    role = ChatRole.ASSISTANT,
-                    text = "",
-                    status = ChatStatus.THINKING
-                )
-            )
-
+            addMessage(ChatMessage(UUID.randomUUID().toString(), ChatRole.ASSISTANT, "", status = ChatStatus.THINKING))
             val intent = aiDirector.understandIntent(text)
             val replyText = aiDirector.generateChatReply(text)
             removeLastAssistantMessage()
-            addMessage(
-                ChatMessage(
-                    id = UUID.randomUUID().toString(),
-                    role = ChatRole.ASSISTANT,
-                    text = replyText,
-                    status = ChatStatus.COMPLETE
-                )
-            )
+            addMessage(ChatMessage(UUID.randomUUID().toString(), ChatRole.ASSISTANT, replyText, status = ChatStatus.COMPLETE))
 
             if (intent is AiAction.CreateStory) {
                 val generatedBlueprint = aiDirector.generateProjectBlueprint(text) ?: return@launch
                 val projectId = UUID.randomUUID().toString()
                 _createdProjectId.value = projectId
-
+                val now = System.currentTimeMillis()
                 val project = ProjectEntity(
                     id = projectId,
                     title = generatedBlueprint.title,
                     genre = generatedBlueprint.genre,
                     durationMinutes = generatedBlueprint.duration,
                     status = "DRAFT",
-                    createdAt = System.currentTimeMillis(),
-                    updatedAt = System.currentTimeMillis()
+                    createdAt = now,
+                    updatedAt = now
                 )
-
                 val scenes = (1..generatedBlueprint.scenesCount).map { i ->
                     SceneEntity(
                         id = UUID.randomUUID().toString(),
@@ -93,10 +80,8 @@ class ChatViewModel @Inject constructor(
                         durationMs = 15000L
                     )
                 }
-
                 projectRepository.saveProject(project)
                 projectRepository.saveScenes(scenes)
-
                 _blueprint.value = BlueprintUi(
                     title = generatedBlueprint.title,
                     category = generatedBlueprint.genre,
@@ -106,26 +91,25 @@ class ChatViewModel @Inject constructor(
                     format = "16:9",
                     scenes = generatedBlueprint.scenesCount
                 )
-
                 _characterReference.value = CharacterReferenceUi(
-                    id = "char_${projectId}",
+                    id = "char_$projectId",
                     name = generatedBlueprint.heroName,
                     role = generatedBlueprint.heroRole,
                     description = generatedBlueprint.heroDescription,
                     style = "سينمائي واقعي",
-                    imageUrl = ""
+                    imageUrl = null
                 )
             }
         }
     }
 
     fun startGeneration() {
-        // Generation is now owned by the persistent pipeline/worker.
-        // Do not simulate progress in the UI.
         _createdProjectId.value?.let { projectId ->
             viewModelScope.launch {
                 val project = projectRepository.getProjectById(projectId) ?: return@launch
+                val job = generationRepository.createJob(projectId)
                 projectRepository.saveProject(project.copy(status = "QUEUED"))
+                generationScheduler.enqueue(job)
                 _isGenerating.value = true
                 _progress.value = 0f
             }
@@ -133,13 +117,17 @@ class ChatViewModel @Inject constructor(
     }
 
     fun stopGeneration() {
-        // Cancellation will be delegated to the persistent WorkManager job.
+        _createdProjectId.value?.let { projectId ->
+            generationScheduler.cancel(projectId)
+            viewModelScope.launch {
+                val project = projectRepository.getProjectById(projectId)
+                if (project != null) projectRepository.saveProject(project.copy(status = "CANCELLED"))
+            }
+        }
         _isGenerating.value = false
     }
 
-    fun retry() {
-        startGeneration()
-    }
+    fun retry() = startGeneration()
 
     fun newChat() {
         _messages.value = emptyList()
@@ -150,13 +138,9 @@ class ChatViewModel @Inject constructor(
         _progress.value = 0f
     }
 
-    private fun addMessage(message: ChatMessage) {
-        _messages.update { it + message }
-    }
+    private fun addMessage(message: ChatMessage) { _messages.update { it + message } }
 
     private fun removeLastAssistantMessage() {
-        _messages.update { list ->
-            list.dropLastWhile { it.role == ChatRole.ASSISTANT }
-        }
+        _messages.update { list -> list.dropLastWhile { it.role == ChatRole.ASSISTANT } }
     }
 }
