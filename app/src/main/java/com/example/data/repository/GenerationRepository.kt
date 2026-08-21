@@ -10,36 +10,31 @@ import javax.inject.Inject
 class GenerationRepository @Inject constructor(
     private val generationJobDao: GenerationJobDao
 ) {
-    fun observeJobs(projectId: String): Flow<List<GenerationJobEntity>> =
-        generationJobDao.getForProject(projectId)
+    fun observeJobs(projectId: String): Flow<List<GenerationJobEntity>> = generationJobDao.getForProject(projectId)
 
     suspend fun createJob(projectId: String): GenerationJobEntity {
         val now = System.currentTimeMillis()
-        val job = GenerationJobEntity(
+        return GenerationJobEntity(
             id = UUID.randomUUID().toString(),
             projectId = projectId,
             status = GenerationStatus.QUEUED,
             createdAt = now,
             updatedAt = now
-        )
-        generationJobDao.upsert(job)
-        return job
+        ).also { generationJobDao.upsert(it) }
     }
 
-    suspend fun updateState(
-        jobId: String,
-        status: String,
-        progress: Int,
-        step: String? = null,
-        errorMessage: String? = null
-    ) {
+    suspend fun cancelLatest(projectId: String) {
+        generationJobDao.getLatestForProject(projectId)?.let {
+            generationJobDao.updateState(
+                it.id, GenerationStatus.CANCELLED, it.progress, "CANCELLED", null,
+                System.currentTimeMillis()
+            )
+        }
+    }
+
+    suspend fun updateState(jobId: String, status: String, progress: Int, step: String? = null, errorMessage: String? = null) {
         generationJobDao.updateState(
-            id = jobId,
-            status = status,
-            progress = progress.coerceIn(0, 100),
-            step = step,
-            errorMessage = errorMessage,
-            updatedAt = System.currentTimeMillis()
+            jobId, status, progress.coerceIn(0, 100), step, errorMessage, System.currentTimeMillis()
         )
     }
 }
