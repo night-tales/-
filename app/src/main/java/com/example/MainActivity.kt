@@ -32,12 +32,9 @@ class MainActivity : ComponentActivity() {
             HomeScreen(
               onCreateClick = { navController.navigate("create") },
               onProjectClick = { project ->
-                if (project.status == "COMPLETED") {
-                  // Pass a dummy video URI for preview purposes, or handle it via a viewmodel
-                  navController.navigate("player")
-                } else {
-                  navController.navigate("editor/${project.id}")
-                }
+                // A project is opened in the editor until a real generated video URL
+                // is persisted by the generation pipeline. Never play demo media here.
+                navController.navigate("editor/${project.id}")
               },
               onLibraryClick = { navController.navigate("library") }
             )
@@ -79,7 +76,7 @@ class MainActivity : ComponentActivity() {
               generationProgress = generationProgress,
               onSend = { viewModel.sendMessage(it) },
               onGenerate = { viewModel.startGeneration() },
-              onEditBlueprint = { 
+              onEditBlueprint = {
                 val pid = viewModel.createdProjectId.value
                 if (pid != null) {
                   navController.navigate("editor/$pid")
@@ -105,7 +102,7 @@ class MainActivity : ComponentActivity() {
 
           composable("player") {
             StoryPlayerScreen(
-              videoUri = "https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4",
+              videoUri = "",
               onBack = { navController.popBackStack() }
             )
           }
