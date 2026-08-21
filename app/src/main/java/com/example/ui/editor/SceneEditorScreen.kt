@@ -20,21 +20,24 @@ import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 
-data class Scene(val id: Int, val title: String, var text: String, var imagePrompt: String = "")
+
+
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.local.entity.SceneEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SceneEditorScreen(onBack: () -> Unit) {
-    var scenes by remember { mutableStateOf(listOf(
-        Scene(1, "المشهد الأول", "في ليلة هادئة، كانت الرياح تعصف بشدة...", "صورة ليلية عاصفة لقلعة قديمة"),
-        Scene(2, "المشهد الثاني", "فجأة، ظهر ضوء غامض من بعيد...", "ضوء متوهج في غابة مظلمة"),
-        Scene(3, "المشهد الثالث", "اقترب البطل بحذر ليرى ما يختبئ في الظلام...", "شخص يقف أمام كهف مضاء")
-    )) }
+fun SceneEditorScreen(
+    onBack: () -> Unit,
+    viewModel: SceneEditorViewModel = hiltViewModel()
+) {
+    val scenes by viewModel.scenes.collectAsStateWithLifecycle()
 
-    var editingScene by remember { mutableStateOf<Scene?>(null) }
+    var editingScene by remember { mutableStateOf<SceneEntity?>(null) }
     var editText by remember { mutableStateOf("") }
     
-    var refiningImage by remember { mutableStateOf<Scene?>(null) }
+    var refiningImage by remember { mutableStateOf<SceneEntity?>(null) }
     var editImagePrompt by remember { mutableStateOf("") }
 
     if (editingScene != null) {
@@ -42,7 +45,7 @@ fun SceneEditorScreen(onBack: () -> Unit) {
             onDismissRequest = { editingScene = null },
             confirmButton = {
                 TextButton(onClick = {
-                    scenes = scenes.map { if (it.id == editingScene!!.id) it.copy(text = editText) else it }
+                    viewModel.updateSceneText(editingScene!!.id, editText)
                     editingScene = null
                 }) {
                     Text("حفظ", color = Color(0xFF64D8FF))
@@ -79,7 +82,7 @@ fun SceneEditorScreen(onBack: () -> Unit) {
             onDismissRequest = { refiningImage = null },
             confirmButton = {
                 TextButton(onClick = {
-                    scenes = scenes.map { if (it.id == refiningImage!!.id) it.copy(imagePrompt = editImagePrompt) else it }
+                    viewModel.updateSceneImagePrompt(refiningImage!!.id, editImagePrompt)
                     refiningImage = null
                 }) {
                     Text("إعادة توليد", color = Color(0xFFF9C74F))
@@ -154,12 +157,12 @@ fun SceneEditorScreen(onBack: () -> Unit) {
                         }
                         
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(scene.text, color = Color.White, fontSize = 14.sp)
+                        Text(scene.narration, color = Color.White, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                             TextButton(onClick = {
                                 refiningImage = scene
-                                editImagePrompt = scene.imagePrompt
+                                editImagePrompt = scene.imagePrompt ?: ""
                             }) {
                                 Icon(Icons.Default.ImageSearch, contentDescription = "Refine Image", modifier = Modifier.size(16.dp), tint = Color.White)
                                 Spacer(Modifier.width(4.dp))
@@ -167,7 +170,7 @@ fun SceneEditorScreen(onBack: () -> Unit) {
                             }
                             TextButton(onClick = {
                                 editingScene = scene
-                                editText = scene.text
+                                editText = scene.narration
                             }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp), tint = Color.White)
                                 Spacer(Modifier.width(4.dp))

@@ -29,4 +29,9 @@ object DatabaseModule {
     fun provideProjectDao(database: AppDatabase): ProjectDao {
         return database.projectDao()
     }
+
+    @Provides
+    fun provideSceneDao(database: AppDatabase): com.example.data.local.dao.SceneDao {
+        return database.sceneDao()
+    }
 }

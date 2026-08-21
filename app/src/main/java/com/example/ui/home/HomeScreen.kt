@@ -17,14 +17,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +37,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,34 +46,74 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-data class Project(
-    val id: String,
-    val title: String,
-    val genre: String,
-    val isCompleted: Boolean
-)
-
-val mockProjects = listOf(
-    Project("1", "حارسة بوابة الزمن", "خيال علمي", true),
-    Project("2", "المدينة تحت البحر", "مغامرة", false),
-    Project("3", "شبح الغابة القديمة", "رعب خفيف", true),
-    Project("4", "رحلة إلى المريخ", "خيال علمي", false)
-)
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.local.entity.ProjectEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onCreateClick: () -> Unit,
-    onProjectClick: (Project) -> Unit,
-    onLibraryClick: () -> Unit = {}
+    onProjectClick: (ProjectEntity) -> Unit,
+    onLibraryClick: () -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val projects by viewModel.projects.collectAsStateWithLifecycle()
+    var renamingProject by remember { mutableStateOf<ProjectEntity?>(null) }
+    var newTitle by remember { mutableStateOf("") }
+    var selectedGenre by remember { mutableStateOf<String?>(null) }
+    val genres = listOf("الكل", "خيال علمي", "مغامرة", "رعب خفيف", "دراما", "كوميديا")
+    val filteredProjects = if (selectedGenre == null || selectedGenre == "الكل") {
+        projects
+    } else {
+        projects.filter { it.genre == selectedGenre }
+    }
+
+    if (renamingProject != null) {
+        AlertDialog(
+            onDismissRequest = { renamingProject = null },
+            title = { Text("إعادة تسمية المشروع", color = Color.White) },
+            text = {
+                OutlinedTextField(
+                    value = newTitle,
+                    onValueChange = { newTitle = it },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF1B263B),
+                        unfocusedContainerColor = Color(0xFF1B263B),
+                        focusedBorderColor = Color(0xFFF9C74F),
+                        unfocusedBorderColor = Color.Transparent
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.renameProject(renamingProject!!.id, newTitle)
+                    renamingProject = null
+                }) {
+                    Text("حفظ", color = Color(0xFFF9C74F))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renamingProject = null }) {
+                    Text("إلغاء", color = Color.White)
+                }
+            },
+            containerColor = Color(0xFF0D1B2A)
+        )
+    }
+
     Scaffold(
         containerColor = Color(0xFF0D1B2A),
         topBar = {
@@ -138,14 +183,43 @@ fun HomeScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(genres) { genre ->
+                    val isSelected = (selectedGenre == genre) || (selectedGenre == null && genre == "الكل")
+                    Surface(
+                        color = if (isSelected) Color(0xFFF9C74F) else Color(0xFF1B263B),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.clickable { selectedGenre = genre }
+                    ) {
+                        Text(
+                            text = genre,
+                            color = if (isSelected) Color(0xFF0D1B2A) else Color.White,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+            
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(mockProjects) { project ->
-                    ProjectCard(project = project, onClick = { onProjectClick(project) })
+                items(filteredProjects) { project ->
+                    ProjectCard(
+                        project = project,
+                        onClick = { onProjectClick(project) },
+                        onEditClick = {
+                            renamingProject = project
+                            newTitle = project.title
+                        }
+                    )
                 }
             }
         }
@@ -153,7 +227,8 @@ fun HomeScreen(
 }
 
 @Composable
-fun ProjectCard(project: Project, onClick: () -> Unit) {
+fun ProjectCard(project: ProjectEntity, onClick: () -> Unit, onEditClick: () -> Unit) {
+    val isCompleted = project.status == "COMPLETED"
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,7 +247,7 @@ fun ProjectCard(project: Project, onClick: () -> Unit) {
                     .background(Color(0xFF1A1A2E), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                if (project.isCompleted) {
+                if (isCompleted) {
                     Surface(
                         shape = CircleShape,
                         color = Color(0x800B0B14),
@@ -192,13 +267,23 @@ fun ProjectCard(project: Project, onClick: () -> Unit) {
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            Text(
-                text = project.title,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                maxLines = 1
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = project.title,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onEditClick, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit Name", tint = Color(0xFFA6A6B3))
+                }
+            }
             
             Spacer(modifier = Modifier.height(4.dp))
             
@@ -216,7 +301,7 @@ fun ProjectCard(project: Project, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = if (project.isCompleted) "تصدير" else "متابعة",
+                    text = if (isCompleted) "تصدير" else "متابعة",
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,

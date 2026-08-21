@@ -10,7 +10,8 @@ data class SceneEntity(
     val index: Int,
     val title: String,
     val narration: String,
-    val imageUrl: String?,
-    val audioUrl: String?,
-    val durationMs: Long
+    val imagePrompt: String? = null,
+    val imageUrl: String? = null,
+    val audioUrl: String? = null,
+    val durationMs: Long = 0
 )

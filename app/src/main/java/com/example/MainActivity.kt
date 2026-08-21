@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
             HomeScreen(
               onCreateClick = { navController.navigate("create") },
               onProjectClick = { project ->
-                if (project.isCompleted) {
+                if (project.status == "COMPLETED") {
                   // Pass a dummy video URI for preview purposes, or handle it via a viewmodel
                   navController.navigate("player")
                 } else {
