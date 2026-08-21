@@ -1,14 +1,16 @@
 package com.example.di
 
+import android.content.Context
 import com.example.generation.AudioProvider
+import com.example.generation.GeminiImageProvider
 import com.example.generation.ImageProvider
+import com.example.generation.Media3VideoAssembler
 import com.example.generation.UnconfiguredAudioProvider
-import com.example.generation.UnconfiguredImageProvider
-import com.example.generation.UnconfiguredVideoAssembler
 import com.example.generation.VideoAssembler
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -17,7 +19,8 @@ import javax.inject.Singleton
 object MediaModule {
     @Provides
     @Singleton
-    fun provideImageProvider(): ImageProvider = UnconfiguredImageProvider()
+    fun provideImageProvider(@ApplicationContext context: Context): ImageProvider =
+        GeminiImageProvider(context)
 
     @Provides
     @Singleton
@@ -25,5 +28,6 @@ object MediaModule {
 
     @Provides
     @Singleton
-    fun provideVideoAssembler(): VideoAssembler = UnconfiguredVideoAssembler()
+    fun provideVideoAssembler(@ApplicationContext context: Context): VideoAssembler =
+        Media3VideoAssembler(context)
 }
