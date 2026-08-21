@@ -1,0 +1,14 @@
+package com.example.di
+
+import com.example.data.repository.GenerationRepository
+import com.example.generation.GenerationPipeline
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.SingletonComponent
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface GenerationEntryPoint {
+    fun generationPipeline(): GenerationPipeline
+    fun generationRepository(): GenerationRepository
+}
