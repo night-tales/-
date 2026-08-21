@@ -17,9 +17,10 @@ import javax.inject.Inject
 
 /** Gemini 3.1 Flash TTS adapter. The API returns 24 kHz mono PCM; we persist a WAV container. */
 class GeminiTtsAudioProvider @Inject constructor(
-    private val context: Context,
-    private val client: OkHttpClient
+    private val context: Context
 ) : AudioProvider {
+    private val client = OkHttpClient()
+
     override suspend fun synthesize(text: String): Uri = withContext(Dispatchers.IO) {
         require(text.isNotBlank()) { "Narration text must not be blank" }
         require(BuildConfig.GEMINI_API_KEY.isNotBlank()) { "GEMINI_API_KEY is not configured" }
