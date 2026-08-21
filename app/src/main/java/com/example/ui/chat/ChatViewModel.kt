@@ -113,7 +113,7 @@ class ChatViewModel @Inject constructor(
                     role = generatedBlueprint.heroRole,
                     description = generatedBlueprint.heroDescription,
                     style = "سينمائي واقعي",
-                    imageUrl = null
+                    imageUrl = ""
                 )
             }
         }
