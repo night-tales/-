@@ -11,7 +11,7 @@ import com.example.data.local.entity.SceneEntity
 
 @Database(
     entities = [ProjectEntity::class, SceneEntity::class, GenerationJobEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
