@@ -21,7 +21,7 @@ object DatabaseModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "night_tales_db")
-            .addMigrations(DatabaseMigrations.MIGRATION_1_2)
+            .addMigrations(DatabaseMigrations.MIGRATION_1_2, DatabaseMigrations.MIGRATION_2_3)
             .build()
 
     @Provides fun provideProjectDao(database: AppDatabase): ProjectDao = database.projectDao()
