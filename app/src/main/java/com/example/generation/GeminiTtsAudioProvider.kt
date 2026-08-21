@@ -70,8 +70,8 @@ class GeminiTtsAudioProvider @Inject constructor(
         val chunkSize = 36 + dataLength
         fun writeInt(value: Int) = output.write(byteArrayOf(
             value.toByte(), (value shr 8).toByte(), (value shr 16).toByte(), (value shr 24).toByte()
-        ).toIntArray())
-        fun writeShort(value: Int) = output.write(byteArrayOf(value.toByte(), (value shr 8).toByte()).toIntArray())
+        ))
+        fun writeShort(value: Int) = output.write(byteArrayOf(value.toByte(), (value shr 8).toByte()))
         output.write("RIFF".toByteArray()); writeInt(chunkSize); output.write("WAVE".toByteArray())
         output.write("fmt ".toByteArray()); writeInt(16); writeShort(1); writeShort(channels)
         writeInt(sampleRate); writeInt(byteRate); writeShort(blockAlign); writeShort(bits)
