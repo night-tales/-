@@ -26,8 +26,13 @@ class AiDirector @Inject constructor(private val geminiApi: GeminiApiService) {
 
     suspend fun understandIntent(userMessage: String): AiAction = runCatching {
         val prompt = "Analyze the message and return ONLY one token: CREATE_STORY, MODIFY_STORY, CREATE_IMAGE, CREATE_AUDIO, CREATE_VIDEO, UNKNOWN. Message: $userMessage"
+        val text = generate(GenerateContentRequest(contents = listOf(Content(parts = listOf(Part(text = prompt)))), generationConfig = GenerationConfig(temperature = 0f))).uppercase()
         when {
-            generate(GenerateContentRequest(contents = listOf(Content(parts = listOf(Part(text = prompt)))), generationConfig = GenerationConfig(temperature = 0f))).uppercase().contains("CREATE_STORY") -> AiAction.CreateStory(userMessage)
+            text.contains("CREATE_STORY") -> AiAction.CreateStory(userMessage)
+            text.contains("MODIFY_STORY") -> AiAction.ModifyStory(userMessage)
+            text.contains("CREATE_IMAGE") -> AiAction.CreateImage(userMessage)
+            text.contains("CREATE_AUDIO") -> AiAction.CreateAudio(userMessage)
+            text.contains("CREATE_VIDEO") -> AiAction.CreateVideo("pending")
             else -> AiAction.Unknown
         }
     }.getOrElse { AiAction.Unknown }
@@ -45,10 +50,8 @@ class AiDirector @Inject constructor(private val geminiApi: GeminiApiService) {
             Return ONLY a JSON array. Each item: {"index":0,"title":"...","narration":"...","imagePrompt":"...","durationMs":15000}
             index starts at 0. durationMs is 5000..60000. Write creative text in Arabic.
         """.trimIndent()
-        val raw = generate(GenerateContentRequest(
-            contents = listOf(Content(parts = listOf(Part(text = prompt)))),
-            generationConfig = GenerationConfig(responseMimeType = "application/json", temperature = 0.3f)
-        )).trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+        val raw = generate(GenerateContentRequest(contents = listOf(Content(parts = listOf(Part(text = prompt)))), generationConfig = GenerationConfig(responseMimeType = "application/json", temperature = 0.3f)))
+            .trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
         val array = JSONArray(raw)
         if (array.length() != count) throw IllegalStateException("Gemini returned ${array.length()} scenes; expected $count")
         (0 until array.length()).map { i ->
@@ -56,8 +59,6 @@ class AiDirector @Inject constructor(private val geminiApi: GeminiApiService) {
             ScenePlan(i, json.getString("title").trim(), json.getString("narration").trim(), json.getString("imagePrompt").trim(), json.optLong("durationMs", 15000L).coerceIn(5000L, 60000L))
         }
     }
-
-    suspend fun generateImageForScene(prompt: String): String = throw IllegalStateException("Image generation provider is not configured")
 
     data class ProjectBlueprintResult(val title: String, val genre: String, val duration: Int, val heroName: String, val heroRole: String, val heroDescription: String, val scenesCount: Int)
 
