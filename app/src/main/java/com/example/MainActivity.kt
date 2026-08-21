@@ -14,7 +14,6 @@ import com.example.ui.chat.ChatViewModel
 import com.example.ui.chat.HakayatChatScreen
 import com.example.ui.create.CreateStoryScreen
 import com.example.ui.home.HomeScreen
-import com.example.ui.player.StoryPlayerScreen
 import com.example.ui.theme.HakayatTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -32,12 +31,9 @@ class MainActivity : ComponentActivity() {
             HomeScreen(
               onCreateClick = { navController.navigate("create") },
               onProjectClick = { project ->
-                if (project.status == "COMPLETED") {
-                  // Pass a dummy video URI for preview purposes, or handle it via a viewmodel
-                  navController.navigate("player")
-                } else {
-                  navController.navigate("editor/${project.id}")
-                }
+                // Projects remain in the editor until the real generation pipeline
+                // persists a playable video URL. Demo media must never be shown.
+                navController.navigate("editor/${project.id}")
               },
               onLibraryClick = { navController.navigate("library") }
             )
@@ -79,7 +75,7 @@ class MainActivity : ComponentActivity() {
               generationProgress = generationProgress,
               onSend = { viewModel.sendMessage(it) },
               onGenerate = { viewModel.startGeneration() },
-              onEditBlueprint = { 
+              onEditBlueprint = {
                 val pid = viewModel.createdProjectId.value
                 if (pid != null) {
                   navController.navigate("editor/$pid")
@@ -94,18 +90,15 @@ class MainActivity : ComponentActivity() {
 
           composable(
             route = "editor/{projectId}",
-            arguments = listOf(androidx.navigation.navArgument("projectId") { type = androidx.navigation.NavType.StringType })
+            arguments = listOf(
+              androidx.navigation.navArgument("projectId") {
+                type = androidx.navigation.NavType.StringType
+              }
+            )
           ) { backStackEntry ->
-            val projectId = backStackEntry.arguments?.getString("projectId") ?: ""
+            val projectId = backStackEntry.arguments?.getString("projectId") ?: return@composable
             com.example.ui.editor.SceneEditorScreen(
               projectId = projectId,
-              onBack = { navController.popBackStack() }
-            )
-          }
-
-          composable("player") {
-            StoryPlayerScreen(
-              videoUri = "https://storage.googleapis.com/exoplayer-test-media-0/BigBuckBunny_320x180.mp4",
               onBack = { navController.popBackStack() }
             )
           }
