@@ -1,24 +1,19 @@
 package com.example.generation
 
 import android.content.Context
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
-import com.example.data.repository.GenerationRepository
 import com.example.data.local.entity.GenerationStatus
+import com.example.di.GenerationEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 
-@HiltWorker
-class GenerationWorker @AssistedInject constructor(
-    @Assisted appContext: Context,
-    @Assisted workerParams: WorkerParameters,
-    private val generationRepository: GenerationRepository,
-    private val pipeline: GenerationPipeline
-) : CoroutineWorker(appContext, workerParams) {
+class GenerationWorker(appContext: Context, workerParams: WorkerParameters) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
         val jobId = inputData.getString(KEY_JOB_ID) ?: return Result.failure()
-        val job = generationRepository.getJob(jobId) ?: return Result.failure()
+        val entryPoint = EntryPointAccessors.fromApplication(applicationContext, GenerationEntryPoint::class.java)
+        val repository = entryPoint.generationRepository()
+        val pipeline = entryPoint.generationPipeline()
+        val job = repository.getJob(jobId) ?: return Result.failure()
         if (job.status == GenerationStatus.CANCELLED) return Result.success()
         if (isStopped) return Result.retry()
         return try {
