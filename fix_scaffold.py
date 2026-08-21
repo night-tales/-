@@ -1,160 +1,19 @@
-package com.example.ui.editor
+import re
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import android.speech.tts.TextToSpeech
-import java.util.Locale
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.ImageSearch
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
+with open('app/src/main/java/com/example/ui/editor/SceneEditorScreen.kt', 'r') as f:
+    content = f.read()
 
+start_str = "    Scaffold("
+# We want to replace from Scaffold to the end of the file.
 
-
-import androidx.compose.ui.platform.LocalContext
-import android.content.Intent
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Visibility
-import com.example.ui.components.MarkdownText
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Visibility
-import com.example.ui.components.MarkdownText
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.data.local.entity.SceneEntity
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SceneEditorScreen(
-    projectId: String,
-    onBack: () -> Unit,
-    viewModel: SceneEditorViewModel = hiltViewModel()
-) {
-    val scenes by viewModel.scenes.collectAsStateWithLifecycle()
-
-    var editingScene by remember { mutableStateOf<SceneEntity?>(null) }
-    var editText by remember { mutableStateOf("") }
-    
-    var refiningImage by remember { mutableStateOf<SceneEntity?>(null) }
-    var editImagePrompt by remember { mutableStateOf("") }
-    
-    var isPreviewMode by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-    DisposableEffect(context) {
-        val textToSpeech = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                // Initialize successfully
-            }
-        }
-        tts = textToSpeech
-        onDispose {
-            textToSpeech.stop()
-            textToSpeech.shutdown()
-        }
-    }
-
-    if (editingScene != null) {
-        AlertDialog(
-            onDismissRequest = { editingScene = null },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.updateSceneText(editingScene!!.id, editText)
-                    editingScene = null
-                }) {
-                    Text("حفظ", color = Color(0xFF64D8FF))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { editingScene = null }) {
-                    Text("إلغاء", color = Color.White)
-                }
-            },
-            title = { Text("تعديل المشهد", color = Color.White) },
-            text = {
-                OutlinedTextField(
-                    value = editText,
-                    onValueChange = { editText = it },
-                    modifier = Modifier.fillMaxWidth().height(150.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color(0xFF1A1A2E),
-                        unfocusedContainerColor = Color(0xFF1A1A2E),
-                        focusedBorderColor = Color(0xFF64D8FF),
-                        unfocusedBorderColor = Color.Transparent
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
-            },
-            containerColor = Color(0xFF121222)
-        )
-    }
-
-    if (refiningImage != null) {
-        AlertDialog(
-            onDismissRequest = { refiningImage = null },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.generateImageForScene(refiningImage!!.id, editImagePrompt)
-                    refiningImage = null
-                }) {
-                    Text("إعادة توليد", color = Color(0xFFF9C74F))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { refiningImage = null }) {
-                    Text("إلغاء", color = Color.White)
-                }
-            },
-            title = { Text("تحسين صورة المشهد", color = Color.White) },
-            text = {
-                Column {
-                    Text("سيتم الحفاظ على هوية الشخصيات الأساسية. قم بوصف الخلفية أو الحركة الجديدة:", color = Color(0xFFA6A6B3), fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = editImagePrompt,
-                        onValueChange = { editImagePrompt = it },
-                        modifier = Modifier.fillMaxWidth().height(100.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedContainerColor = Color(0xFF1B263B),
-                            unfocusedContainerColor = Color(0xFF1B263B),
-                            focusedBorderColor = Color(0xFFF9C74F),
-                            unfocusedBorderColor = Color.Transparent
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            },
-            containerColor = Color(0xFF1B263B)
-        )
-    }
-
-    Scaffold(
+replacement = """    Scaffold(
         containerColor = Color(0xFF0D1B2A),
         topBar = {
             TopAppBar(
                 title = { Text(if (isPreviewMode) "معاينة القصة" else "محرر المشاهد", color = Color(0xFFF9C74F)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "رجوع", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع", tint = Color.White)
                     }
                 },
                 actions = {
@@ -166,6 +25,12 @@ fun SceneEditorScreen(
                         )
                     }
                     if (isPreviewMode) {
+                        IconButton(onClick = {
+                            val fullStory = scenes.joinToString(". ") { it.narration }
+                            tts?.speak(fullStory, TextToSpeech.QUEUE_FLUSH, null, "story_read")
+                        }) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Play Aloud", tint = Color.White)
+                        }
                         IconButton(onClick = {
                             val fullStory = scenes.joinToString("\n\n") { "## ${it.title}\n\n${it.narration}" }
                             val intent = Intent(Intent.ACTION_SEND).apply {
@@ -262,3 +127,11 @@ fun SceneEditorScreen(
         }
     }
 }
+"""
+
+start_idx = content.find(start_str)
+
+if start_idx != -1:
+    new_content = content[:start_idx] + replacement
+    with open('app/src/main/java/com/example/ui/editor/SceneEditorScreen.kt', 'w') as f:
+        f.write(new_content)

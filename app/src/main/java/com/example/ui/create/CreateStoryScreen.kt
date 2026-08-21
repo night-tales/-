@@ -40,30 +40,36 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+data class StoryTemplate(val title: String, val theme: String, val characters: String, val genre: String, val icon: String)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateStoryScreen(
     onBack: () -> Unit,
     onGenerate: (String, String, String) -> Unit
 ) {
-    var idea by remember { mutableStateOf("") }
+    var theme by remember { mutableStateOf("") }
+    var characters by remember { mutableStateOf("") }
     var expandedGenre by remember { mutableStateOf(false) }
     var selectedGenre by remember { mutableStateOf("قصة خرافية (Fairy Tale)") }
     val genres = listOf("قصة خرافية (Fairy Tale)", "خيال علمي (Sci-Fi)", "إثارة وتشويق (Thriller)", "مغامرة (Adventure)")
-
     var expandedVoice by remember { mutableStateOf(false) }
     var selectedVoice by remember { mutableStateOf("راوي كلاسيكي") }
     val voices = listOf("راوي كلاسيكي", "صوت طفولي", "صوت عميق")
-
     var expandedStyle by remember { mutableStateOf(false) }
     var selectedStyle by remember { mutableStateOf("لوحة زيتية (Oil Painting)") }
     val styles = listOf("لوحة زيتية (Oil Painting)", "رسوم متحركة ثلاثية الأبعاد (3D Animation)", "قصاصات ورقية (Paper Cutout)", "أنمي (Anime)", "واقعي (Realistic)")
-
+    val templates = listOf(
+        StoryTemplate("مدينة النجوم", "رحلة للبحث عن نجمة مفقودة سقطت في غابة نائية", "ليلى (فتاة شجاعة)، بوبو (بومة حكيمة)", "مغامرة (Adventure)", "🌟"),
+        StoryTemplate("الآلي اللطيف", "روبوت قديم يستيقظ في مصنع مهجور ويكتشف معنى الصداقة", "روبو-9، قطة ضالة اسمها زوزو", "خيال علمي (Sci-Fi)", "🤖"),
+        StoryTemplate("لغز القلعة", "أطفال يكتشفون قلعة مهجورة تظهر فقط في منتصف الليل", "سامي (فضولي)، سارة (ذكية ومحللة)", "إثارة وتشويق (Thriller)", "🏰"),
+        StoryTemplate("الغابة السحرية", "حيوانات الغابة تتحد لإنقاذ شجرة الحياة من الجفاف", "فرفور (أرنب سريع)، الدب دبدوب", "قصة خرافية (Fairy Tale)", "🌲")
+    )
     val creativeSuggestions = when(selectedGenre) {
         "قصة خرافية (Fairy Tale)" -> listOf("يكتشف خريطة سحرية تظهر فقط في ضوء القمر", "حيوان ناطق يطلب المساعدة", "تعويذة تحول القرية إلى زجاج")
         "خيال علمي (Sci-Fi)" -> listOf("رسالة غامضة من الفضاء الخارجي", "روبوت يكتشف المشاعر", "بوابة زمنية تعيد البطل ليوم الأمس")
@@ -92,187 +98,237 @@ fun CreateStoryScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            Text("فكرة القصة", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = idea,
-                onValueChange = { idea = it },
-                modifier = Modifier.fillMaxWidth().height(150.dp),
-                placeholder = { Text("مثال: طفل يجد بوابة سحرية في غرفته...", color = Color(0xFFA6A6B3)) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedContainerColor = Color(0xFF121222),
-                    unfocusedContainerColor = Color(0xFF121222),
-                    focusedBorderColor = Color(0xFF64D8FF),
-                    unfocusedBorderColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            if (creativeSuggestions.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("محفز الإبداع ✨", color = Color(0xFF64D8FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(creativeSuggestions) { suggestion ->
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = Color(0xFF233B5E),
-                            modifier = Modifier.clickable {
-                                idea = if (idea.isBlank()) suggestion else "$idea، $suggestion"
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    Text("قوالب جاهزة (Templates)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(templates) { template ->
+                            Card(
+                                modifier = Modifier
+                                    .width(160.dp)
+                                    .height(100.dp)
+                                    .clickable {
+                                        theme = template.theme
+                                        characters = template.characters
+                                        selectedGenre = template.genre
+                                    },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1B263B))
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp).fillMaxSize(), verticalArrangement = Arrangement.Center) {
+                                    Text(text = template.icon, fontSize = 24.sp)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(text = template.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
-                        ) {
-                            Text(
-                                text = suggestion,
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        }
+                    }
+                }
+                item {
+                    Text("فكرة القصة (Theme)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = theme,
+                        onValueChange = { theme = it },
+                        modifier = Modifier.fillMaxWidth().height(100.dp),
+                        placeholder = { Text("مثال: طفل يجد بوابة سحرية في غرفته...", color = Color(0xFFA6A6B3)) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF121222),
+                            unfocusedContainerColor = Color(0xFF121222),
+                            focusedBorderColor = Color(0xFF64D8FF),
+                            unfocusedBorderColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+                
+                item {
+                    Text("الشخصيات (Characters)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = characters,
+                        onValueChange = { characters = it },
+                        modifier = Modifier.fillMaxWidth().height(80.dp),
+                        placeholder = { Text("مثال: رامي، طفل فضولي. حارس البوابة...", color = Color(0xFFA6A6B3)) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF121222),
+                            unfocusedContainerColor = Color(0xFF121222),
+                            focusedBorderColor = Color(0xFF64D8FF),
+                            unfocusedBorderColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+
+                item {
+                    if (creativeSuggestions.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("محفز الإبداع ✨", color = Color(0xFF64D8FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(creativeSuggestions) { suggestion ->
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color(0xFF233B5E),
+                                    modifier = Modifier.clickable {
+                                        theme = if (theme.isBlank()) suggestion else "$theme، $suggestion"
+                                    }
+                                ) {
+                                    Text(
+                                        text = suggestion,
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Text("نوع القصة (Genre)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = selectedGenre,
+                        onValueChange = { },
+                        readOnly = true,
+                        enabled = false,
+                        modifier = Modifier.fillMaxWidth().clickable { expandedGenre = true },
+                        trailingIcon = {
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown", tint = Color.White)
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = Color.White,
+                            disabledContainerColor = Color(0xFF121222),
+                            disabledBorderColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    DropdownMenu(
+                        expanded = expandedGenre,
+                        onDismissRequest = { expandedGenre = false }
+                    ) {
+                        genres.forEach { genre ->
+                            DropdownMenuItem(
+                                text = { Text(genre) },
+                                onClick = {
+                                    selectedGenre = genre
+                                    expandedGenre = false
+                                }
                             )
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("نوع القصة (Genre)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            OutlinedTextField(
-                value = selectedGenre,
-                onValueChange = { },
-                readOnly = true,
-                enabled = false,
-                modifier = Modifier.fillMaxWidth().clickable { expandedGenre = true },
-                trailingIcon = {
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown", tint = Color.White)
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = Color.White,
-                    disabledContainerColor = Color(0xFF121222),
-                    disabledBorderColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(12.dp)
-            )
-            
-            DropdownMenu(
-                expanded = expandedGenre,
-                onDismissRequest = { expandedGenre = false }
-            ) {
-                genres.forEach { genre ->
-                    DropdownMenuItem(
-                        text = { Text(genre) },
-                        onClick = {
-                            selectedGenre = genre
-                            expandedGenre = false
-                        }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("صوت الراوي (Voice Profile)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = selectedVoice,
-                onValueChange = { },
-                readOnly = true,
-                enabled = false,
-                modifier = Modifier.fillMaxWidth().clickable { expandedVoice = true },
-                trailingIcon = {
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown", tint = Color.White)
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = Color.White,
-                    disabledContainerColor = Color(0xFF121222),
-                    disabledBorderColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            DropdownMenu(
-                expanded = expandedVoice,
-                onDismissRequest = { expandedVoice = false }
-            ) {
-                voices.forEach { voice ->
-                    DropdownMenuItem(
-                        text = { Text(voice) },
-                        onClick = {
-                            selectedVoice = voice
-                            expandedVoice = false
-                        }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("النمط البصري (Visual Style)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(styles) { style ->
-                    val isSelected = style == selectedStyle
-                    Card(
-                        modifier = Modifier
-                            .width(100.dp)
-                            .height(120.dp)
-                            .clickable { selectedStyle = style },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) Color(0xFFF9C74F).copy(alpha = 0.2f) else Color(0xFF1B263B)
+                item {
+                    Text("صوت الراوي (Voice Profile)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = selectedVoice,
+                        onValueChange = { },
+                        readOnly = true,
+                        enabled = false,
+                        modifier = Modifier.fillMaxWidth().clickable { expandedVoice = true },
+                        trailingIcon = {
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown", tint = Color.White)
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = Color.White,
+                            disabledContainerColor = Color(0xFF121222),
+                            disabledBorderColor = Color.Transparent
                         ),
-                        border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFF9C74F)) else null
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    DropdownMenu(
+                        expanded = expandedVoice,
+                        onDismissRequest = { expandedVoice = false }
                     ) {
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            androidx.compose.foundation.layout.Box(
+                        voices.forEach { voice ->
+                            DropdownMenuItem(
+                                text = { Text(voice) },
+                                onClick = {
+                                    selectedVoice = voice
+                                    expandedVoice = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    Text("النمط البصري (Visual Style)", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(styles) { style ->
+                            val isSelected = style == selectedStyle
+                            Card(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(70.dp)
-                                    .background(Color(0xFF23324C)),
-                                contentAlignment = androidx.compose.ui.Alignment.Center
+                                    .width(100.dp)
+                                    .height(120.dp)
+                                    .clickable { selectedStyle = style },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) Color(0xFFF9C74F).copy(alpha = 0.2f) else Color(0xFF1B263B)
+                                ),
+                                border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFF9C74F)) else null
                             ) {
-                                Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Image,
-                                    contentDescription = "Style Thumbnail",
-                                    tint = if (isSelected) Color(0xFFF9C74F) else Color(0xFFA6A6B3),
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                            androidx.compose.foundation.layout.Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .padding(4.dp),
-                                contentAlignment = androidx.compose.ui.Alignment.Center
-                            ) {
-                                Text(
-                                    text = style.split(" (").first(),
-                                    color = if (isSelected) Color(0xFFF9C74F) else Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    maxLines = 2
-                                )
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    androidx.compose.foundation.layout.Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(70.dp)
+                                            .background(Color(0xFF23324C)),
+                                        contentAlignment = androidx.compose.ui.Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = androidx.compose.material.icons.Icons.Default.Image,
+                                            contentDescription = "Style Thumbnail",
+                                            tint = if (isSelected) Color(0xFFF9C74F) else Color(0xFFA6A6B3),
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                    androidx.compose.foundation.layout.Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .weight(1f)
+                                            .padding(4.dp),
+                                        contentAlignment = androidx.compose.ui.Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = style.split(" (").first(),
+                                            color = if (isSelected) Color(0xFFF9C74F) else Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            maxLines = 2
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.weight(1f))
-
+            
+            Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    if (idea.isNotBlank()) {
-                        onGenerate(idea, selectedGenre, selectedVoice)
+                    if (theme.isNotBlank() && characters.isNotBlank()) {
+                        val fullPrompt = "Theme: $theme\nCharacters: $characters"
+                        onGenerate(fullPrompt, selectedGenre, selectedVoice)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                enabled = idea.isNotBlank(),
+                enabled = theme.isNotBlank() && characters.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF64D8FF),
                     disabledContainerColor = Color(0xFF3C4A62),

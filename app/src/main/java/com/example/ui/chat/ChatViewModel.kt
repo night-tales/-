@@ -14,10 +14,14 @@ import javax.inject.Inject
 
 import com.example.domain.ai.AiAction
 import com.example.domain.ai.AiDirector
+import com.example.data.repository.ProjectRepository
+import com.example.data.local.entity.ProjectEntity
+import com.example.data.local.entity.SceneEntity
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val aiDirector: AiDirector
+    private val aiDirector: AiDirector,
+    private val projectRepository: ProjectRepository
 ) : ViewModel() {
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -34,6 +38,9 @@ class ChatViewModel @Inject constructor(
 
     private val _progress = MutableStateFlow(0f)
     val progress: StateFlow<Float> = _progress.asStateFlow()
+
+    private val _createdProjectId = MutableStateFlow<String?>(null)
+    val createdProjectId: StateFlow<String?> = _createdProjectId.asStateFlow()
 
     fun sendMessage(text: String) {
         if (text.isBlank()) return
@@ -77,6 +84,34 @@ class ChatViewModel @Inject constructor(
                 val generatedBlueprint = aiDirector.generateProjectBlueprint(text)
 
                 if (generatedBlueprint != null) {
+                    val projectId = UUID.randomUUID().toString()
+                    _createdProjectId.value = projectId
+                    
+                    val project = ProjectEntity(
+                        id = projectId,
+                        title = generatedBlueprint.title,
+                        genre = generatedBlueprint.genre,
+                        durationMinutes = generatedBlueprint.duration,
+                        status = "DRAFT",
+                        createdAt = System.currentTimeMillis(),
+                        updatedAt = System.currentTimeMillis()
+                    )
+                    
+                    val scenes = (1..generatedBlueprint.scenesCount).map { i ->
+                        SceneEntity(
+                            id = UUID.randomUUID().toString(),
+                            projectId = projectId,
+                            index = i - 1,
+                            title = "المشهد $i",
+                            narration = "جاري كتابة المحتوى لهذا المشهد...",
+                            imagePrompt = "مشهد مقترح لقصة ${generatedBlueprint.title}",
+                            durationMs = 15000L
+                        )
+                    }
+                    
+                    projectRepository.saveProject(project)
+                    projectRepository.saveScenes(scenes)
+                    
                     _blueprint.value = BlueprintUi(
                         title = generatedBlueprint.title,
                         category = generatedBlueprint.genre,

@@ -1,5 +1,6 @@
 package com.example.ui.editor
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.entity.ProjectEntity
@@ -14,14 +15,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SceneEditorViewModel @Inject constructor(
-    private val repository: ProjectRepository
+    private val repository: ProjectRepository,
+    private val aiDirector: com.example.domain.ai.AiDirector, savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _scenes = MutableStateFlow<List<SceneEntity>>(emptyList())
     val scenes: StateFlow<List<SceneEntity>> = _scenes.asStateFlow()
     
-    // For prototyping, we use a hardcoded project ID unless one is passed
-    private val currentProjectId: String = "project_1"
+    private val currentProjectId: String = savedStateHandle.get<String>("projectId") ?: "project_1"
 
     init {
         viewModelScope.launch {
@@ -69,6 +70,21 @@ class SceneEditorViewModel @Inject constructor(
         }
         _scenes.value = updatedScenes
         autoSave(updatedScenes)
+    }
+
+    fun generateImageForScene(sceneId: String, prompt: String) {
+        viewModelScope.launch {
+            try {
+                val url = aiDirector.generateImageForScene(prompt)
+                val updatedScenes = _scenes.value.map {
+                    if (it.id == sceneId) it.copy(imageUrl = url) else it
+                }
+                _scenes.value = updatedScenes
+                autoSave(updatedScenes)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
     
     private fun autoSave(scenesToSave: List<SceneEntity>) {

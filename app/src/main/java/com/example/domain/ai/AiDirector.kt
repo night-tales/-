@@ -43,7 +43,7 @@ class AiDirector @Inject constructor(
                 textResponse.contains("MODIFY_STORY") -> AiAction.ModifyStory(userMessage)
                 textResponse.contains("CREATE_IMAGE") -> AiAction.CreateImage(userMessage)
                 textResponse.contains("CREATE_AUDIO") -> AiAction.CreateAudio(userMessage)
-                textResponse.contains("CREATE_VIDEO") -> AiAction.CreateVideo("temp_id") // ID would come from context later
+                textResponse.contains("CREATE_VIDEO") -> AiAction.CreateVideo("temp_id")
                 else -> AiAction.Unknown
             }
         } catch (e: Exception) {
@@ -71,8 +71,16 @@ class AiDirector @Inject constructor(
                 ?: "عذراً، حدث خطأ في التواصل مع الاستوديو. حاول مرة أخرى."
         } catch (e: Exception) {
             e.printStackTrace()
-            "يبدو أن هناك مشكلة في الاتصال. لا أستطيع الرد حالياً."
+            "عذراً، حدث خطأ في التواصل مع الاستوديو. حاول مرة أخرى."
         }
+    }
+
+    suspend fun generateImageForScene(prompt: String): String = withContext(Dispatchers.IO) {
+        // Since Gemini API does not natively support image generation, 
+        // we use a free AI image generation endpoint (Pollinations AI)
+        // using the scene description/prompt for the image text.
+        val encodedPrompt = java.net.URLEncoder.encode(prompt, "UTF-8")
+        "https://image.pollinations.ai/prompt/$encodedPrompt?width=800&height=400&nologo=true"
     }
 
     data class ProjectBlueprintResult(
@@ -102,7 +110,6 @@ class AiDirector @Inject constructor(
               "scenesCount": 8
             }
         """.trimIndent()
-
         try {
             val request = GenerateContentRequest(
                 contents = listOf(Content(parts = listOf(Part(text = prompt)))),

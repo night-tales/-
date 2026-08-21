@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
                   // Pass a dummy video URI for preview purposes, or handle it via a viewmodel
                   navController.navigate("player")
                 } else {
-                  navController.navigate("chat")
+                  navController.navigate("editor/${project.id}")
                 }
               },
               onLibraryClick = { navController.navigate("library") }
@@ -79,7 +79,12 @@ class MainActivity : ComponentActivity() {
               generationProgress = generationProgress,
               onSend = { viewModel.sendMessage(it) },
               onGenerate = { viewModel.startGeneration() },
-              onEditBlueprint = { navController.navigate("editor") },
+              onEditBlueprint = { 
+                val pid = viewModel.createdProjectId.value
+                if (pid != null) {
+                  navController.navigate("editor/$pid")
+                }
+              },
               onStop = { viewModel.stopGeneration() },
               onRetry = { viewModel.retry() },
               onNewChat = { viewModel.newChat() },
@@ -87,8 +92,13 @@ class MainActivity : ComponentActivity() {
             )
           }
 
-          composable("editor") {
+          composable(
+            route = "editor/{projectId}",
+            arguments = listOf(androidx.navigation.navArgument("projectId") { type = androidx.navigation.NavType.StringType })
+          ) { backStackEntry ->
+            val projectId = backStackEntry.arguments?.getString("projectId") ?: ""
             com.example.ui.editor.SceneEditorScreen(
+              projectId = projectId,
               onBack = { navController.popBackStack() }
             )
           }
