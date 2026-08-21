@@ -15,6 +15,9 @@ interface GenerationJobDao {
     @Query("SELECT * FROM generation_jobs WHERE projectId = :projectId ORDER BY createdAt DESC")
     fun getForProject(projectId: String): Flow<List<GenerationJobEntity>>
 
+    @Query("SELECT * FROM generation_jobs WHERE projectId = :projectId ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getLatestForProject(projectId: String): GenerationJobEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(job: GenerationJobEntity)
 
