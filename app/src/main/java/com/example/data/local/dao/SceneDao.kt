@@ -13,6 +13,9 @@ interface SceneDao {
     @Query("SELECT * FROM scenes WHERE projectId = :projectId ORDER BY `index` ASC")
     fun getScenesForProject(projectId: String): Flow<List<SceneEntity>>
 
+    @Query("SELECT * FROM scenes WHERE projectId = :projectId ORDER BY `index` ASC")
+    suspend fun getScenesForProjectOnce(projectId: String): List<SceneEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertScenes(scenes: List<SceneEntity>)
 
