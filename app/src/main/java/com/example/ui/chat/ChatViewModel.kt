@@ -25,80 +25,41 @@ class ChatViewModel @Inject constructor(
     private val generationRepository: GenerationRepository,
     private val generationScheduler: GenerationScheduler
 ) : ViewModel() {
-
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
-
     private val _blueprint = MutableStateFlow<BlueprintUi?>(null)
     val blueprint: StateFlow<BlueprintUi?> = _blueprint.asStateFlow()
-
     private val _characterReference = MutableStateFlow<CharacterReferenceUi?>(null)
     val characterReference: StateFlow<CharacterReferenceUi?> = _characterReference.asStateFlow()
-
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
-
     private val _progress = MutableStateFlow(0f)
     val progress: StateFlow<Float> = _progress.asStateFlow()
-
     private val _createdProjectId = MutableStateFlow<String?>(null)
     val createdProjectId: StateFlow<String?> = _createdProjectId.asStateFlow()
 
     fun sendMessage(text: String) {
         if (text.isBlank()) return
         addMessage(ChatMessage(UUID.randomUUID().toString(), ChatRole.USER, text))
-
         viewModelScope.launch {
             addMessage(ChatMessage(UUID.randomUUID().toString(), ChatRole.ASSISTANT, "", status = ChatStatus.THINKING))
             val intent = aiDirector.understandIntent(text)
             val replyText = aiDirector.generateChatReply(text)
             removeLastAssistantMessage()
             addMessage(ChatMessage(UUID.randomUUID().toString(), ChatRole.ASSISTANT, replyText, status = ChatStatus.COMPLETE))
-
             if (intent is AiAction.CreateStory) {
                 val generatedBlueprint = aiDirector.generateProjectBlueprint(text) ?: return@launch
                 val projectId = UUID.randomUUID().toString()
                 _createdProjectId.value = projectId
                 val now = System.currentTimeMillis()
-                val project = ProjectEntity(
-                    id = projectId,
-                    title = generatedBlueprint.title,
-                    genre = generatedBlueprint.genre,
-                    durationMinutes = generatedBlueprint.duration,
-                    status = "DRAFT",
-                    createdAt = now,
-                    updatedAt = now
-                )
+                val project = ProjectEntity(projectId, generatedBlueprint.title, generatedBlueprint.genre, generatedBlueprint.duration, "DRAFT", now, now)
                 val scenes = (1..generatedBlueprint.scenesCount).map { i ->
-                    SceneEntity(
-                        id = UUID.randomUUID().toString(),
-                        projectId = projectId,
-                        index = i - 1,
-                        title = "المشهد $i",
-                        narration = "",
-                        imagePrompt = "",
-                        durationMs = 15000L
-                    )
+                    SceneEntity(UUID.randomUUID().toString(), projectId, i - 1, "المشهد $i", "", "", durationMs = 15000L)
                 }
                 projectRepository.saveProject(project)
                 projectRepository.saveScenes(scenes)
-                _blueprint.value = BlueprintUi(
-                    title = generatedBlueprint.title,
-                    category = generatedBlueprint.genre,
-                    duration = generatedBlueprint.duration,
-                    hero = generatedBlueprint.heroName,
-                    style = "سينمائي",
-                    format = "16:9",
-                    scenes = generatedBlueprint.scenesCount
-                )
-                _characterReference.value = CharacterReferenceUi(
-                    id = "char_$projectId",
-                    name = generatedBlueprint.heroName,
-                    role = generatedBlueprint.heroRole,
-                    description = generatedBlueprint.heroDescription,
-                    style = "سينمائي واقعي",
-                    imageUrl = null
-                )
+                _blueprint.value = BlueprintUi(generatedBlueprint.title, generatedBlueprint.genre, generatedBlueprint.duration, generatedBlueprint.heroName, "سينمائي", "16:9", generatedBlueprint.scenesCount)
+                _characterReference.value = CharacterReferenceUi("char_$projectId", generatedBlueprint.heroName, generatedBlueprint.heroRole, generatedBlueprint.heroDescription, "سينمائي واقعي", null)
             }
         }
     }
@@ -120,8 +81,8 @@ class ChatViewModel @Inject constructor(
         _createdProjectId.value?.let { projectId ->
             generationScheduler.cancel(projectId)
             viewModelScope.launch {
-                val project = projectRepository.getProjectById(projectId)
-                if (project != null) projectRepository.saveProject(project.copy(status = "CANCELLED"))
+                generationRepository.cancelLatest(projectId)
+                projectRepository.getProjectById(projectId)?.let { projectRepository.saveProject(it.copy(status = "CANCELLED")) }
             }
         }
         _isGenerating.value = false
@@ -139,8 +100,5 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun addMessage(message: ChatMessage) { _messages.update { it + message } }
-
-    private fun removeLastAssistantMessage() {
-        _messages.update { list -> list.dropLastWhile { it.role == ChatRole.ASSISTANT } }
-    }
+    private fun removeLastAssistantMessage() { _messages.update { list -> list.dropLastWhile { it.role == ChatRole.ASSISTANT } } }
 }
