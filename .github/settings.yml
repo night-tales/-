@@ -1,0 +1,9 @@
+repository:
+  description: "Night Tales Studio - استوديو متكامل يعمل بالذكاء الاصطناعي لإنشاء قصص مصورة، ومسموعة، ومتحركة"
+  topics: android, app, kotlin, ai, compose, media3, story-generator
+  has_issues: true
+  has_projects: true
+  has_wiki: true
+  has_discussions: true
+  has_downloads: true
+  default_branch: main

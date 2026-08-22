@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: 💬 المناقشات
+    url: https://github.com/night-tales/-/discussions
+    about: اطرح أسئلتك واستفساراتك في قسم المناقشات
+  - name: 📖 توثيق المشروع
+    url: https://github.com/night-tales/-#readme
+    about: اقرأ التوثيق قبل فتح issue جديد
