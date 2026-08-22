@@ -6,6 +6,7 @@ import com.example.data.local.entity.GenerationJobEntity
 import com.example.data.local.entity.GenerationStatus
 import com.example.data.repository.GenerationRepository
 import com.example.domain.ai.AiDirector
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 import javax.inject.Inject
@@ -22,13 +23,24 @@ class GenerationPipeline @Inject constructor(
     suspend fun run(job: GenerationJobEntity) {
         try {
             update(job, 5, "AI_SCENES")
-            val project = projectDao.getProjectById(job.projectId) ?: error("Project not found: ${job.projectId}")
+            val project = projectDao.getProjectById(job.projectId)
+                ?: error("Project not found: ${job.projectId}")
             val existingScenes = sceneDao.getScenesForProjectOnce(job.projectId)
             if (existingScenes.isEmpty()) error("Project has no scenes")
+
             val scenePlans = aiDirector.generateScenes(project.title, existingScenes.size)
+            require(scenePlans.size == existingScenes.size) {
+                "AI returned ${scenePlans.size} scenes; expected ${existingScenes.size}"
+            }
+
             val scenes = existingScenes.mapIndexed { index, scene ->
                 val plan = scenePlans[index]
-                scene.copy(title = plan.title, narration = plan.narration, imagePrompt = plan.imagePrompt, durationMs = plan.durationMs)
+                scene.copy(
+                    title = plan.title,
+                    narration = plan.narration,
+                    imagePrompt = plan.imagePrompt,
+                    durationMs = plan.durationMs.coerceAtLeast(1000)
+                )
             }
             sceneDao.insertScenes(scenes)
 
@@ -47,25 +59,61 @@ class GenerationPipeline @Inject constructor(
                 coroutineContext.ensureActive()
                 val scene = scenes[index]
                 val audio = audioProvider.synthesize(scene.narration)
-                sceneDao.updateScene(scene.copy(imageUrl = item.imageUri.toString(), audioUrl = audio.toString()))
+                sceneDao.updateScene(
+                    scene.copy(
+                        imageUrl = item.imageUri.toString(),
+                        audioUrl = audio.toString()
+                    )
+                )
                 update(job, 65 + ((index + 1) * 20 / scenes.size), "AUDIO")
                 item.copy(audioUri = audio)
             }
 
             update(job, 88, "VIDEO_ASSEMBLY")
+            coroutineContext.ensureActive()
             val video = videoAssembler.assemble(withAudio)
-            projectDao.insertProject(project.copy(videoUri = video.toString(), status = GenerationStatus.COMPLETED, updatedAt = System.currentTimeMillis()))
+            projectDao.insertProject(
+                project.copy(
+                    videoUri = video.toString(),
+                    status = GenerationStatus.COMPLETED,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
             generationRepository.updateState(job.id, GenerationStatus.COMPLETED, 100, "COMPLETED")
+        } catch (cancelled: CancellationException) {
+            generationRepository.updateState(
+                job.id,
+                GenerationStatus.CANCELLED,
+                job.progress,
+                "CANCELLED",
+                null
+            )
+            projectDao.updateStatus(job.projectId, GenerationStatus.CANCELLED, System.currentTimeMillis())
+            throw cancelled
         } catch (t: Throwable) {
-            if (t is kotlinx.coroutines.CancellationException) throw t
-            generationRepository.updateState(job.id, GenerationStatus.FAILED, 0, "FAILED", t.message?.take(500))
+            generationRepository.updateState(
+                job.id,
+                GenerationStatus.FAILED,
+                0,
+                "FAILED",
+                t.message?.take(500)
+            )
             projectDao.updateStatus(job.projectId, GenerationStatus.FAILED, System.currentTimeMillis())
             throw t
         }
     }
 
     private suspend fun update(job: GenerationJobEntity, progress: Int, step: String) {
-        generationRepository.updateState(job.id, GenerationStatus.GENERATING, progress, step)
-        projectDao.updateStatus(job.projectId, GenerationStatus.GENERATING, System.currentTimeMillis())
+        generationRepository.updateState(
+            job.id,
+            GenerationStatus.GENERATING,
+            progress,
+            step
+        )
+        projectDao.updateStatus(
+            job.projectId,
+            GenerationStatus.GENERATING,
+            System.currentTimeMillis()
+        )
     }
 }
