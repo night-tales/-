@@ -135,4 +135,81 @@ class AiDirector @Inject constructor(
             null
         }
     }
+
+    data class ScenePlan(
+        val title: String,
+        val narration: String,
+        val imagePrompt: String,
+        val durationMs: Long
+    )
+
+    suspend fun generateScenes(projectTitle: String, count: Int): List<ScenePlan> = withContext(Dispatchers.IO) {
+        val prompt = """
+            You are the AI Director for Night Tales Studio.
+            The user is creating a story titled: "$projectTitle".
+            Please generate $count sequential scenes for this story.
+            Return a valid JSON array matching exactly this structure, with no markdown formatting or extra text:
+            [
+              {
+                "title": "Scene 1: Introduction",
+                "narration": "Narration text in Arabic",
+                "imagePrompt": "Detailed visual description of the scene in English for AI image generator",
+                "durationMs": 5000
+              }
+            ]
+        """.trimIndent()
+        try {
+            val request = GenerateContentRequest(
+                contents = listOf(Content(parts = listOf(Part(text = prompt)))),
+                generationConfig = GenerationConfig(responseMimeType = "application/json")
+            )
+            val response = geminiApi.generateContent(BuildConfig.GEMINI_API_KEY, request)
+            val jsonText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+            
+            val plans = mutableListOf<ScenePlan>()
+            if (jsonText != null) {
+                val array = org.json.JSONArray(jsonText)
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    plans.add(
+                        ScenePlan(
+                            title = obj.optString("title", "مشهد جديد"),
+                            narration = obj.optString("narration", "نص سردي..."),
+                            imagePrompt = obj.optString("imagePrompt", "Cinematic shot of..."),
+                            durationMs = obj.optLong("durationMs", 5000L)
+                        )
+                    )
+                }
+            }
+            // Pad if less
+            while (plans.size < count) {
+                plans.add(ScenePlan("مشهد جديد", "نص السرد", "Prompt", 5000L))
+            }
+            plans.take(count)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            List(count) { ScenePlan("مشهد جديد", "نص السرد", "Prompt", 5000L) }
+        }
+    }
+
+    suspend fun generateStoryText(promptText: String): String = withContext(Dispatchers.IO) {
+        val prompt = """
+            أنت كاتب قصص مبدع ومحترف في استوديو "حكايات الليل".
+            اكتب قصة قصيرة مشوقة باللغة العربية الفصحى بناءً على الفكرة التالية:
+            "$promptText"
+            يجب أن تكون القصة منسقة بشكل جميل، مقسمة إلى فقرات، وخالية من أي رموز أو نصوص برمجية (Markdown)، ومناسبة للقراءة مباشرة.
+        """.trimIndent()
+        
+        try {
+            val request = GenerateContentRequest(
+                contents = listOf(Content(parts = listOf(Part(text = prompt))))
+            )
+            val response = geminiApi.generateContent(BuildConfig.GEMINI_API_KEY, request)
+            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+                ?: "عذراً، لم أتمكن من توليد القصة. حاول مجدداً."
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "حدث خطأ أثناء توليد القصة: ${e.message}"
+        }
+    }
 }

@@ -21,4 +21,6 @@ interface SceneDao {
 
     @Query("DELETE FROM scenes WHERE projectId = :projectId")
     suspend fun deleteScenesForProject(projectId: String)
+    @Query("SELECT * FROM scenes WHERE projectId = :projectId ORDER BY `index` ASC")
+    suspend fun getScenesForProjectOnce(projectId: String): List<SceneEntity>
 }

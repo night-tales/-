@@ -22,7 +22,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "night_tales_db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides
@@ -33,5 +33,10 @@ object DatabaseModule {
     @Provides
     fun provideSceneDao(database: AppDatabase): com.example.data.local.dao.SceneDao {
         return database.sceneDao()
+    }
+
+    @Provides
+    fun provideGeneratedStoryDao(database: AppDatabase): com.example.data.local.dao.GeneratedStoryDao {
+        return database.generatedStoryDao()
     }
 }

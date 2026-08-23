@@ -53,20 +53,20 @@ class GenerationPipeline @Inject constructor(
 
             update(job, 88, "VIDEO_ASSEMBLY")
             val video = videoAssembler.assemble(withAudio)
-            projectDao.updateStatus(job.projectId, GenerationStatus.COMPLETED, System.currentTimeMillis())
+            projectDao.updateStatus(job.projectId, GenerationStatus.COMPLETED.name, System.currentTimeMillis())
             generationRepository.updateState(job.id, GenerationStatus.COMPLETED, 100, "COMPLETED")
             // Final video URI is persisted as the project status pipeline reaches completion in the next schema step.
             video.toString()
         } catch (t: Throwable) {
             if (t is kotlinx.coroutines.CancellationException) throw t
             generationRepository.updateState(job.id, GenerationStatus.FAILED, 0, "FAILED", t.message?.take(500))
-            projectDao.updateStatus(job.projectId, GenerationStatus.FAILED, System.currentTimeMillis())
+            projectDao.updateStatus(job.projectId, GenerationStatus.FAILED.name, System.currentTimeMillis())
             throw t
         }
     }
 
     private suspend fun update(job: GenerationJobEntity, progress: Int, step: String) {
         generationRepository.updateState(job.id, GenerationStatus.GENERATING, progress, step)
-        projectDao.updateStatus(job.projectId, GenerationStatus.GENERATING, System.currentTimeMillis())
+        projectDao.updateStatus(job.projectId, GenerationStatus.GENERATING.name, System.currentTimeMillis())
     }
 }

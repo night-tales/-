@@ -22,6 +22,10 @@ import com.example.studio.voice.VoiceStudioScreen
 import com.example.studio.timeline.TimelineScreen
 import com.example.studio.export.ExportScreen
 import com.example.ui.theme.HakayatTheme
+
+import com.example.studio.generator.CreateStoryPromptScreen
+import com.example.studio.generator.StoryReaderScreen
+
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -62,14 +66,32 @@ class MainActivity : ComponentActivity() {
                             ProjectDashboardScreen(
                                 project = mockProject,
                                 onBack = { /* Exit App */ },
-                                onPreview = { navController.navigate("preview") },
-                                onStoryClick = { navController.navigate("story_studio") },
+                                onPreview = { /* TODO: Implement Preview Screen */ },
+                                onStoryClick = { navController.navigate("story_generator") },
                                 onCharactersClick = { navController.navigate("character_studio") },
                                 onScenesClick = { navController.navigate("scene_studio") },
                                 onImagesClick = { navController.navigate("image_studio") },
                                 onVoiceClick = { navController.navigate("voice_studio") },
                                 onTimelineClick = { navController.navigate("timeline_studio") },
                                 onExportClick = { navController.navigate("export_studio") }
+                            )
+                        }
+                        composable("story_generator") {
+                            CreateStoryPromptScreen(
+                                onBack = { navController.popBackStack() },
+                                onStoryGenerated = { storyId ->
+                                    navController.navigate("story_reader/$storyId")
+                                },
+                                onStoryClicked = { storyId ->
+                                    navController.navigate("story_reader/$storyId")
+                                }
+                            )
+                        }
+                        composable("story_reader/{storyId}") { backStackEntry ->
+                            val storyId = backStackEntry.arguments?.getString("storyId") ?: return@composable
+                            StoryReaderScreen(
+                                storyId = storyId,
+                                onBack = { navController.popBackStack() }
                             )
                         }
                         composable("story_studio") {
