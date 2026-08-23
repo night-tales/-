@@ -19,6 +19,12 @@ interface SceneDao {
     @Update
     suspend fun updateScene(scene: SceneEntity)
 
+    @Query("SELECT * FROM scenes WHERE id = :id")
+    suspend fun getSceneById(id: String): SceneEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertScene(scene: SceneEntity)
+
     @Query("DELETE FROM scenes WHERE projectId = :projectId")
     suspend fun deleteScenesForProject(projectId: String)
     @Query("SELECT * FROM scenes WHERE projectId = :projectId ORDER BY `index` ASC")

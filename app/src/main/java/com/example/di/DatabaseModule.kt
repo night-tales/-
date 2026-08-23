@@ -39,4 +39,9 @@ object DatabaseModule {
     fun provideGeneratedStoryDao(database: AppDatabase): com.example.data.local.dao.GeneratedStoryDao {
         return database.generatedStoryDao()
     }
+
+    @Provides
+    fun provideCharacterDao(database: AppDatabase): com.example.data.local.dao.CharacterDao {
+        return database.characterDao()
+    }
 }
