@@ -2,7 +2,7 @@
 
 استوديو متكامل يعمل بالذكاء الاصطناعي لإنشاء قصص مصورة، ومسموعة، ومتحركة. يوفر التطبيق تجربة احترافية متكاملة (Project-Centric Architecture) تتيح للمستخدمين توليد القصص، تصميم الشخصيات، إعداد المشاهد (Storyboard)، توليد الصور، إضافة التعليق الصوتي والموسيقى، وتصدير الفيديو النهائي بجودات متعددة لمنصات مختلفة.
 
-[![Version](https://img.shields.io/badge/الإصدار-1.0.0-blue?style=flat-square)](https://github.com/night-tales/-/releases/latest)
+[![Version](https://img.shields.io/badge/الإصدار-1.1.0-blue?style=flat-square)](https://github.com/night-tales/-/releases/latest)
 [![License](https://img.shields.io/badge/الترخيص-MIT-green?style=flat-square)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/night-tales/-/total?style=flat-square)](https://github.com/night-tales/-/releases)
 [![Platform](https://img.shields.io/badge/المنصة-Android-brightgreen?style=flat-square&logo=android)](https://www.android.com)
@@ -72,7 +72,7 @@
 لتشغيل المشروع من المصدر ستحتاج إلى:
 
 - [Android Studio](https://developer.android.com/studio)
-- [JDK 17 أو أحدث](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
+- **JDK 17 أو أحدث**
 - [Git](https://git-scm.com/)
 - جهاز Android أو محاكي يعمل بنظام Android 8.0 (Oreo) أو أعلى.
 
@@ -81,21 +81,12 @@
 ## 🔧 التثبيت من المصدر
 
 ```bash
-# 1. استنساخ المستودع
 git clone https://github.com/night-tales/-.git
-
-# 2. الانتقال إلى مجلد المشروع
 cd -
-
-# 3. فتح المشروع في Android Studio
-#    (افتح Android Studio ثم اختر "Open an existing project" وحدد المجلد)
-
-# 4. مزامنة الاعتمادات (Gradle)
 ./gradlew build
-
-# 5. تشغيل التطبيق
-#    اضغط على زر التشغيل (Run) في Android Studio بعد توصيل جهاز أو تشغيل محاكي.
 ```
+
+> يعتمد إعداد الأسرار على ملف `.env` محلي. استخدم `.env.example` كقالب ولا تضع مفاتيح حقيقية في المستودع.
 
 ---
 
