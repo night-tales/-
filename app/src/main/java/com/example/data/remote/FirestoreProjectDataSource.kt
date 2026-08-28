@@ -15,7 +15,16 @@ class FirestoreProjectDataSource @Inject constructor(
 
     override suspend fun getProject(id: String): ProjectEntity? {
         val snapshot = projects.document(id).get().await()
-        return snapshot.toObject(ProjectEntity::class.java)
+        if (!snapshot.exists()) return null
+        return ProjectEntity(
+            id = snapshot.id,
+            title = snapshot.getString("title").orEmpty(),
+            genre = snapshot.getString("genre").orEmpty(),
+            durationMinutes = snapshot.getLong("durationMinutes")?.toInt() ?: 0,
+            status = snapshot.getString("status").orEmpty(),
+            createdAt = snapshot.getLong("createdAt") ?: 0L,
+            updatedAt = snapshot.getLong("updatedAt") ?: 0L
+        )
     }
 
     override suspend fun upsertProject(project: ProjectEntity) {
