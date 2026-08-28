@@ -1,9 +1,16 @@
 package com.example.data.sync
 
 import android.content.Context
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.example.data.local.AppDatabase
+import com.example.data.remote.FirestoreGeneratedStoryDataSource
+import com.example.data.remote.FirestoreProjectChildrenDataSource
 import com.example.data.remote.RemoteProjectDataSource
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -12,7 +19,9 @@ class ProjectSyncWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val database: AppDatabase,
-    private val remote: RemoteProjectDataSource
+    private val remote: RemoteProjectDataSource,
+    private val childrenRemote: FirestoreProjectChildrenDataSource,
+    private val storiesRemote: FirestoreGeneratedStoryDataSource
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -20,45 +29,46 @@ class ProjectSyncWorker @AssistedInject constructor(
         val operation = dao.next() ?: return Result.success()
 
         return try {
-            when (operation.operation) {
-                "UPSERT_PROJECT" -> {
-                    val project = database.projectDao().getProjectById(operation.projectId)
-                    if (project != null) {
-                        remote.upsertProject(project)
-                    } else {
-                        // The local record may have been removed after an older
-                        // upsert was queued. The newer delete operation is allowed
-                        // to handle remote deletion.
-                    }
-                }
-                "DELETE_PROJECT" -> remote.deleteProject(operation.projectId)
-                else -> Unit
+            when (operation.entityType to operation.operation) {
+                "PROJECT" to "UPSERT" -> database.projectDao()
+                    .getProjectById(operation.entityId)?.let(remote::upsertProject)
+                "PROJECT" to "DELETE" -> remote.deleteProject(operation.projectId)
+                "SCENE" to "UPSERT" -> database.sceneDao()
+                    .getSceneById(operation.entityId)?.let(childrenRemote::upsertScene)
+                "SCENE" to "DELETE" -> childrenRemote.deleteScene(operation.projectId, operation.entityId)
+                "CHARACTER" to "UPSERT" -> database.characterDao()
+                    .getCharacterById(operation.entityId)?.let(childrenRemote::upsertCharacter)
+                "CHARACTER" to "DELETE" -> childrenRemote.deleteCharacter(operation.projectId, operation.entityId)
+                "GENERATED_STORY" to "UPSERT" -> database.generatedStoryDao()
+                    .getStoryById(operation.entityId)?.let(storiesRemote::upsertStory)
+                "GENERATED_STORY" to "DELETE" -> storiesRemote.deleteStory(operation.projectId, operation.entityId)
             }
 
             dao.delete(operation.id)
 
-            // KEEP prevents duplicate workers; explicitly schedule another run
-            // when more queued operations remain.
             if (dao.count() > 0) {
-                val request = androidx.work.OneTimeWorkRequestBuilder<ProjectSyncWorker>()
-                    .setConstraints(
-                        androidx.work.Constraints.Builder()
-                            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
-                            .build()
-                    )
-                    .build()
-                androidx.work.WorkManager.getInstance(applicationContext)
-                    .enqueueUniqueWork(
-                        "project-sync",
-                        androidx.work.ExistingWorkPolicy.REPLACE,
-                        request
-                    )
+                enqueueNext()
             }
-
             Result.success()
         } catch (error: Exception) {
             dao.recordFailure(operation.id, error.message)
             if (runAttemptCount >= 4) Result.failure() else Result.retry()
         }
+    }
+
+    private fun enqueueNext() {
+        val request = OneTimeWorkRequestBuilder<ProjectSyncWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+
+        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+            "project-sync",
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
     }
 }
