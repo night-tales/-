@@ -62,6 +62,12 @@ class ProjectRepository @Inject constructor(
         }
     }
 
+    suspend fun deleteScene(scene: SceneEntity) {
+        authSession.requireUserId()
+        sceneDao.deleteScene(scene.id)
+        enqueueSync("SCENE", scene.id, scene.projectId, "DELETE")
+    }
+
     suspend fun saveCharacter(character: CharacterEntity) {
         authSession.requireUserId()
         characterDao.insertCharacter(character)
