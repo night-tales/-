@@ -6,9 +6,13 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.data.auth.AuthSession
+import com.example.data.local.dao.CharacterDao
+import com.example.data.local.dao.GeneratedStoryDao
 import com.example.data.local.dao.ProjectDao
 import com.example.data.local.dao.SceneDao
 import com.example.data.local.dao.SyncOperationDao
+import com.example.data.local.entity.CharacterEntity
+import com.example.data.local.entity.GeneratedStoryEntity
 import com.example.data.local.entity.ProjectEntity
 import com.example.data.local.entity.SceneEntity
 import com.example.data.local.entity.SyncOperationEntity
@@ -19,6 +23,8 @@ import javax.inject.Inject
 class ProjectRepository @Inject constructor(
     private val projectDao: ProjectDao,
     private val sceneDao: SceneDao,
+    private val characterDao: CharacterDao,
+    private val generatedStoryDao: GeneratedStoryDao,
     private val syncOperationDao: SyncOperationDao,
     private val workManager: WorkManager,
     private val authSession: AuthSession
@@ -29,14 +35,18 @@ class ProjectRepository @Inject constructor(
         projectDao.getProjectById(id)
 
     suspend fun saveProject(project: ProjectEntity) {
-        val updated = project.copy(ownerId = authSession.requireUserId(), updatedAt = System.currentTimeMillis())
+        val updated = project.copy(
+            ownerId = authSession.requireUserId(),
+            updatedAt = System.currentTimeMillis()
+        )
         projectDao.insertProject(updated)
-        enqueueSync(updated.id, "UPSERT_PROJECT")
+        enqueueSync("PROJECT", updated.id, updated.id, "UPSERT")
     }
 
     suspend fun deleteProject(id: String) {
+        authSession.requireUserId()
         projectDao.deleteProject(id)
-        enqueueSync(id, "DELETE_PROJECT")
+        enqueueSync("PROJECT", id, id, "DELETE")
     }
 
     fun getScenesForProject(projectId: String): Flow<List<SceneEntity>> =
@@ -47,29 +57,56 @@ class ProjectRepository @Inject constructor(
         if (scenes.isEmpty()) return
 
         sceneDao.insertScenes(scenes)
-        val projectId = scenes.first().projectId
-        val project = projectDao.getProjectById(projectId)
-        if (project != null) {
-            val updated = project.copy(updatedAt = System.currentTimeMillis())
-            projectDao.insertProject(updated)
-            enqueueSync(projectId, "UPSERT_PROJECT")
+        scenes.forEach { scene ->
+            enqueueSync("SCENE", scene.id, scene.projectId, "UPSERT")
         }
     }
 
-    private suspend fun enqueueSync(projectId: String, operation: String) {
+    suspend fun saveCharacter(character: CharacterEntity) {
+        authSession.requireUserId()
+        characterDao.insertCharacter(character)
+        enqueueSync("CHARACTER", character.id, character.projectId, "UPSERT")
+    }
+
+    suspend fun deleteCharacter(character: CharacterEntity) {
+        authSession.requireUserId()
+        characterDao.deleteCharacter(character.id)
+        enqueueSync("CHARACTER", character.id, character.projectId, "DELETE")
+    }
+
+    suspend fun saveGeneratedStory(story: GeneratedStoryEntity) {
+        val ownerId = authSession.requireUserId()
+        generatedStoryDao.insertStory(story.copy(ownerId = ownerId))
+        enqueueSync("GENERATED_STORY", story.id, story.projectId, "UPSERT")
+    }
+
+    suspend fun deleteGeneratedStory(story: GeneratedStoryEntity) {
+        authSession.requireUserId()
+        generatedStoryDao.deleteStory(story.id)
+        enqueueSync("GENERATED_STORY", story.id, story.projectId, "DELETE")
+    }
+
+    private suspend fun enqueueSync(
+        entityType: String,
+        entityId: String,
+        projectId: String,
+        operation: String
+    ) {
         syncOperationDao.enqueue(
             SyncOperationEntity(
+                entityType = entityType,
+                entityId = entityId,
                 projectId = projectId,
                 operation = operation
             )
         )
 
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
         val request = OneTimeWorkRequestBuilder<ProjectSyncWorker>()
-            .setConstraints(constraints)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
             .build()
 
         workManager.enqueueUniqueWork(
