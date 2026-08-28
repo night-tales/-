@@ -92,6 +92,7 @@ class ProjectRepository @Inject constructor(
         projectId: String,
         operation: String
     ) {
+        syncOperationDao.removeForEntity(entityType, entityId)
         syncOperationDao.enqueue(
             SyncOperationEntity(
                 entityType = entityType,
