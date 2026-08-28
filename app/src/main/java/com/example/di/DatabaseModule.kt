@@ -36,6 +36,9 @@ object DatabaseModule {
     }
 
     @Provides
+    fun provideSyncOperationDao(database: AppDatabase): SyncOperationDao = database.syncOperationDao()
+
+    @Provides
     fun provideGeneratedStoryDao(database: AppDatabase): com.example.data.local.dao.GeneratedStoryDao {
         return database.generatedStoryDao()
     }
