@@ -24,29 +24,25 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "night_tales_db"
-        ).addMigrations(AppMigrations.MIGRATION_6_7).build()
+        ).addMigrations(
+            AppMigrations.MIGRATION_4_5,
+            AppMigrations.MIGRATION_5_6,
+            AppMigrations.MIGRATION_6_7
+        ).build()
     }
 
     @Provides
-    fun provideProjectDao(database: AppDatabase): ProjectDao {
-        return database.projectDao()
-    }
+    fun provideProjectDao(database: AppDatabase): ProjectDao = database.projectDao()
 
     @Provides
-    fun provideSceneDao(database: AppDatabase): com.example.data.local.dao.SceneDao {
-        return database.sceneDao()
-    }
+    fun provideSceneDao(database: AppDatabase): com.example.data.local.dao.SceneDao = database.sceneDao()
 
     @Provides
     fun provideSyncOperationDao(database: AppDatabase): SyncOperationDao = database.syncOperationDao()
 
     @Provides
-    fun provideGeneratedStoryDao(database: AppDatabase): com.example.data.local.dao.GeneratedStoryDao {
-        return database.generatedStoryDao()
-    }
+    fun provideGeneratedStoryDao(database: AppDatabase): com.example.data.local.dao.GeneratedStoryDao = database.generatedStoryDao()
 
     @Provides
-    fun provideCharacterDao(database: AppDatabase): com.example.data.local.dao.CharacterDao {
-        return database.characterDao()
-    }
+    fun provideCharacterDao(database: AppDatabase): com.example.data.local.dao.CharacterDao = database.characterDao()
 }
