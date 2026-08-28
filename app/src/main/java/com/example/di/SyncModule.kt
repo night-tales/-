@@ -20,6 +20,13 @@ abstract class SyncModule {
 
     companion object {
         @Provides
+        fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+        @Provides
+        fun provideWorkManager(@dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context): WorkManager =
+            WorkManager.getInstance(context)
+
+        @Provides
         fun provideProjectChildrenDataSource(
             source: FirestoreProjectChildrenDataSource
         ): FirestoreProjectChildrenDataSource = source
