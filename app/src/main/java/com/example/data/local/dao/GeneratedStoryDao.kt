@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.example.data.local.entity.GeneratedStoryEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +21,9 @@ interface GeneratedStoryDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStory(story: GeneratedStoryEntity)
+
+    @Update
+    suspend fun updateStory(story: GeneratedStoryEntity)
 
     @Query("DELETE FROM generated_stories WHERE id = :id")
     suspend fun deleteStory(id: String)
