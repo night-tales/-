@@ -23,6 +23,9 @@ object AppMigrations {
     val MIGRATION_6_7 = object : Migration(6, 7) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(
+                "ALTER TABLE projects ADD COLUMN ownerId TEXT NOT NULL DEFAULT ''"
+            )
+            db.execSQL(
                 "ALTER TABLE generated_stories ADD COLUMN projectId TEXT NOT NULL DEFAULT ''"
             )
             db.execSQL(
