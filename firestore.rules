@@ -12,12 +12,15 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      allow read, create, update, delete: if signedIn()
-        && (
-          (resource == null && request.resource.data.ownerId == request.auth.uid) ||
-          (resource != null && resource.data.ownerId == request.auth.uid
-            && request.resource.data.ownerId == request.auth.uid)
-        );
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow read, delete: if signedIn()
+        && resource.data.ownerId == request.auth.uid;
+
+      allow update: if signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
 
       match /scenes/{sceneId} {
         allow read, create, update, delete: if ownsProject(projectId);
