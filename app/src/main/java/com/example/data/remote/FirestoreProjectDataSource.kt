@@ -18,6 +18,7 @@ class FirestoreProjectDataSource @Inject constructor(
         if (!snapshot.exists()) return null
         return ProjectEntity(
             id = snapshot.id,
+            ownerId = snapshot.getString("ownerId").orEmpty(),
             title = snapshot.getString("title").orEmpty(),
             genre = snapshot.getString("genre").orEmpty(),
             durationMinutes = snapshot.getLong("durationMinutes")?.toInt() ?: 0,
