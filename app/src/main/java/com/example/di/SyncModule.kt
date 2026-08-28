@@ -1,12 +1,11 @@
 package com.example.di
 
-import com.example.data.remote.FirestoreProjectChildrenDataSource
 import com.example.data.remote.FirestoreGeneratedStoryDataSource
+import com.example.data.remote.FirestoreProjectChildrenDataSource
 import com.example.data.remote.FirestoreProjectDataSource
 import com.example.data.remote.RemoteProjectDataSource
 import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 
@@ -19,19 +18,12 @@ abstract class SyncModule {
     ): RemoteProjectDataSource
 
     companion object {
-        @Provides
-        fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
-
-        @Provides
-        fun provideWorkManager(@dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context): WorkManager =
-            WorkManager.getInstance(context)
-
-        @Provides
+        @dagger.Provides
         fun provideProjectChildrenDataSource(
             source: FirestoreProjectChildrenDataSource
         ): FirestoreProjectChildrenDataSource = source
 
-        @Provides
+        @dagger.Provides
         fun provideGeneratedStoryDataSource(
             source: FirestoreGeneratedStoryDataSource
         ): FirestoreGeneratedStoryDataSource = source
