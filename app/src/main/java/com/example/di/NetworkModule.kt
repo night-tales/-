@@ -1,5 +1,6 @@
 package com.example.di
 
+import com.example.BuildConfig
 import com.example.data.remote.gemini.GeminiApiService
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -30,7 +31,7 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            // Never log request/response bodies in release builds.
+            // Keep request/response bodies out of logs to avoid leaking prompts or secrets.
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BASIC
             } else {
