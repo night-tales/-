@@ -25,8 +25,12 @@ interface SceneDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertScene(scene: SceneEntity)
 
+    @Query("DELETE FROM scenes WHERE id = :id")
+    suspend fun deleteScene(id: String)
+
     @Query("DELETE FROM scenes WHERE projectId = :projectId")
     suspend fun deleteScenesForProject(projectId: String)
+
     @Query("SELECT * FROM scenes WHERE projectId = :projectId ORDER BY `index` ASC")
     suspend fun getScenesForProjectOnce(projectId: String): List<SceneEntity>
 }
