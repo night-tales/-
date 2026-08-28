@@ -1,24 +1,30 @@
 package com.example.studio.scene
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.dao.SceneDao
 import com.example.data.local.entity.SceneEntity
 import com.example.domain.ai.AiDirector
+import com.example.domain.audio.TtsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
 class SceneViewModel @Inject constructor(
     private val aiDirector: AiDirector,
-    private val sceneDao: SceneDao
+    private val sceneDao: SceneDao,
+    private val ttsManager: TtsManager,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val currentProjectId = "proj_1"
@@ -41,6 +47,24 @@ class SceneViewModel @Inject constructor(
         }
     }
 
+    fun generateVoiceOver(sceneId: String) {
+        viewModelScope.launch {
+            _isGenerating.value = true
+            val scene = sceneDao.getSceneById(sceneId)
+            if (scene != null && scene.narration.isNotBlank()) {
+                val outputDir = File(context.cacheDir, "audio")
+                if (!outputDir.exists()) outputDir.mkdirs()
+                val outputFile = File(outputDir, "scene_${scene.id}.wav")
+                
+                val result = ttsManager.synthesizeToFile(scene.narration, outputFile)
+                if (result.isSuccess) {
+                    sceneDao.updateScene(scene.copy(audioUrl = outputFile.absolutePath))
+                }
+            }
+            _isGenerating.value = false
+        }
+    }
+
     fun addNewScene() {
         viewModelScope.launch {
             val newScene = SceneEntity(
@@ -48,7 +72,7 @@ class SceneViewModel @Inject constructor(
                 projectId = currentProjectId,
                 index = scenes.value.size,
                 title = "مشهد جديد",
-                narration = "انقر هنا لتعديل نص السرد الخاص بهذا المشهد...",
+                narration = "في إحدى الليالي المقمرة، كان آدم يسير في الغابة...",
                 imagePrompt = "A cinematic view...",
                 durationMs = 5000L
             )

@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.data.local.entity.SceneEntity
+import com.example.domain.audio.AudioPlayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +39,14 @@ fun SceneStudioScreen(
 ) {
     val scenes by viewModel.scenes.collectAsStateWithLifecycle()
     val isGenerating by viewModel.isGenerating.collectAsStateWithLifecycle()
+    
+    val audioPlayer = remember { AudioPlayer() }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            audioPlayer.stop()
+        }
+    }
 
     Scaffold(
         containerColor = Color(0xFF0B0B14),
@@ -75,9 +86,10 @@ fun SceneStudioScreen(
                 SceneCard(
                     scene = scene,
                     onGenerateImage = { viewModel.generateImage(scene.id) },
-                    onAddVoiceOver = { /* TODO */ },
+                    onAddVoiceOver = { viewModel.generateVoiceOver(scene.id) },
                     onEdit = { /* TODO */ },
-                    isGenerating = isGenerating
+                    isGenerating = isGenerating,
+                    audioPlayer = audioPlayer
                 )
             }
         }
@@ -90,8 +102,11 @@ fun SceneCard(
     onGenerateImage: () -> Unit,
     onAddVoiceOver: () -> Unit,
     onEdit: () -> Unit,
-    isGenerating: Boolean
+    isGenerating: Boolean,
+    audioPlayer: AudioPlayer
 ) {
+    var isPlaying by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1B263B)),
@@ -160,6 +175,38 @@ fun SceneCard(
             
             Spacer(modifier = Modifier.height(12.dp))
             
+            // Audio Preview if exists
+            if (scene.audioUrl != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF0B0B14))
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = {
+                        if (isPlaying) {
+                            audioPlayer.stop()
+                            isPlaying = false
+                        } else {
+                            isPlaying = true
+                            audioPlayer.play(scene.audioUrl) {
+                                isPlaying = false
+                            }
+                        }
+                    }) {
+                        Icon(
+                            if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                            contentDescription = "Play/Stop",
+                            tint = Color(0xFF64D8FF)
+                        )
+                    }
+                    Text("الصوت مسجل", color = Color.White, fontSize = 14.sp)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            
             // Actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -173,17 +220,18 @@ fun SceneCard(
                 ) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFF64D8FF))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("توليد صورة", color = Color.White)
+                    Text("صورة", color = Color.White)
                 }
                 
                 Button(
                     onClick = onAddVoiceOver,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF533483))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF533483)),
+                    enabled = !isGenerating
                 ) {
                     Icon(Icons.Default.Mic, contentDescription = null, tint = Color.White)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("تعليق صوتي", color = Color.White)
+                    Text("صوت", color = Color.White)
                 }
             }
         }

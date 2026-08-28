@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
                             ProjectDashboardScreen(
                                 project = mockProject,
                                 onBack = { /* Exit App */ },
-                                onPreview = { /* TODO: Implement Preview Screen */ },
+                                onPreview = { navController.navigate("timeline_studio") },
                                 onStoryClick = { navController.navigate("story_generator") },
                                 onCharactersClick = { navController.navigate("character_studio") },
                                 onScenesClick = { navController.navigate("scene_studio") },
