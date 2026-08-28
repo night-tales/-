@@ -10,7 +10,7 @@ import androidx.room.PrimaryKey
 )
 data class GeneratedStoryEntity(
     @PrimaryKey val id: String,
-    val projectId: String,
+    val projectId: String = "",
     val ownerId: String = "",
     val prompt: String,
     val title: String,
