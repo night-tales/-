@@ -5,6 +5,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.data.auth.AuthSession
 import com.example.data.local.dao.ProjectDao
 import com.example.data.local.dao.SceneDao
 import com.example.data.local.dao.SyncOperationDao
@@ -19,7 +20,8 @@ class ProjectRepository @Inject constructor(
     private val projectDao: ProjectDao,
     private val sceneDao: SceneDao,
     private val syncOperationDao: SyncOperationDao,
-    private val workManager: WorkManager
+    private val workManager: WorkManager,
+    private val authSession: AuthSession
 ) {
     val allProjects: Flow<List<ProjectEntity>> = projectDao.getAllProjects()
 
@@ -27,7 +29,7 @@ class ProjectRepository @Inject constructor(
         projectDao.getProjectById(id)
 
     suspend fun saveProject(project: ProjectEntity) {
-        val updated = project.copy(updatedAt = System.currentTimeMillis())
+        val updated = project.copy(ownerId = authSession.requireUserId(), updatedAt = System.currentTimeMillis())
         projectDao.insertProject(updated)
         enqueueSync(updated.id, "UPSERT_PROJECT")
     }
@@ -41,6 +43,7 @@ class ProjectRepository @Inject constructor(
         sceneDao.getScenesForProject(projectId)
 
     suspend fun saveScenes(scenes: List<SceneEntity>) {
+        authSession.requireUserId()
         if (scenes.isEmpty()) return
 
         sceneDao.insertScenes(scenes)
