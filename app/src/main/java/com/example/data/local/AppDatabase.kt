@@ -21,7 +21,7 @@ import com.example.data.local.entity.SyncOperationEntity
         CharacterEntity::class,
         SyncOperationEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
