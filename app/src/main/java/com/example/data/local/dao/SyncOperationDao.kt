@@ -11,7 +11,7 @@ interface SyncOperationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun enqueue(operation: SyncOperationEntity)
 
-    @Query("SELECT * FROM sync_operations ORDER BY createdAt ASC LIMIT 1")
+    @Query("SELECT * FROM sync_operations ORDER BY createdAt ASC, id ASC LIMIT 1")
     suspend fun next(): SyncOperationEntity?
 
     @Query("DELETE FROM sync_operations WHERE id = :id")
