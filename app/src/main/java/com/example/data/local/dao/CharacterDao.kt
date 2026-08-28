@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import com.example.data.local.entity.CharacterEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -18,9 +17,6 @@ interface CharacterDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCharacter(character: CharacterEntity)
-
-    @Update
-    suspend fun updateCharacter(character: CharacterEntity)
 
     @Query("DELETE FROM characters WHERE id = :id")
     suspend fun deleteCharacter(id: String)
