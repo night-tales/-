@@ -8,8 +8,11 @@ import com.example.data.local.entity.SyncOperationEntity
 
 @Dao
 interface SyncOperationDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun enqueue(operation: SyncOperationEntity)
+
+    @Query("DELETE FROM sync_operations WHERE entityType = :entityType AND entityId = :entityId")
+    suspend fun removeForEntity(entityType: String, entityId: String)
 
     @Query("SELECT * FROM sync_operations ORDER BY createdAt ASC, id ASC LIMIT 1")
     suspend fun next(): SyncOperationEntity?
