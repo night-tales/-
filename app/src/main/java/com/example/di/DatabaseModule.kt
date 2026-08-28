@@ -3,6 +3,7 @@ package com.example.di
 import android.content.Context
 import androidx.room.Room
 import com.example.data.local.AppDatabase
+import com.example.data.local.AppMigrations
 import com.example.data.local.dao.ProjectDao
 import com.example.data.local.dao.SyncOperationDao
 import dagger.Module
@@ -23,7 +24,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "night_tales_db"
-        ).fallbackToDestructiveMigration().build()
+        ).addMigrations(AppMigrations.MIGRATION_6_7).build()
     }
 
     @Provides
