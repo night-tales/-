@@ -29,7 +29,15 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
-        val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+        val logging = HttpLoggingInterceptor().apply {
+            // Never log request/response bodies in release builds.
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BASIC
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
+        }
+
         return OkHttpClient.Builder()
             .addInterceptor(logging)
             .connectTimeout(60, TimeUnit.SECONDS)
