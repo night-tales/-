@@ -3,7 +3,9 @@ package com.example.di
 import android.content.Context
 import androidx.room.Room
 import com.example.data.local.AppDatabase
+import com.example.data.local.AppMigrations
 import com.example.data.local.dao.ProjectDao
+import com.example.data.local.dao.SyncOperationDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,26 +24,25 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "night_tales_db"
-        ).fallbackToDestructiveMigration().build()
+        ).addMigrations(
+            AppMigrations.MIGRATION_4_5,
+            AppMigrations.MIGRATION_5_6,
+            AppMigrations.MIGRATION_6_7
+        ).build()
     }
 
     @Provides
-    fun provideProjectDao(database: AppDatabase): ProjectDao {
-        return database.projectDao()
-    }
+    fun provideProjectDao(database: AppDatabase): ProjectDao = database.projectDao()
 
     @Provides
-    fun provideSceneDao(database: AppDatabase): com.example.data.local.dao.SceneDao {
-        return database.sceneDao()
-    }
+    fun provideSceneDao(database: AppDatabase): com.example.data.local.dao.SceneDao = database.sceneDao()
 
     @Provides
-    fun provideGeneratedStoryDao(database: AppDatabase): com.example.data.local.dao.GeneratedStoryDao {
-        return database.generatedStoryDao()
-    }
+    fun provideSyncOperationDao(database: AppDatabase): SyncOperationDao = database.syncOperationDao()
 
     @Provides
-    fun provideCharacterDao(database: AppDatabase): com.example.data.local.dao.CharacterDao {
-        return database.characterDao()
-    }
+    fun provideGeneratedStoryDao(database: AppDatabase): com.example.data.local.dao.GeneratedStoryDao = database.generatedStoryDao()
+
+    @Provides
+    fun provideCharacterDao(database: AppDatabase): com.example.data.local.dao.CharacterDao = database.characterDao()
 }

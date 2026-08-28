@@ -10,24 +10,26 @@ jobs:
   lint:
     name: Run Lint
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: gradle
-      
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-      
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
       - name: Run Android Lint
-        run: ./gradlew lintDebug
-      
+        run: gradle lintDebug --stacktrace
+
       - name: Upload lint report
         uses: actions/upload-artifact@v4
         with:
